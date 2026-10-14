@@ -2,8 +2,8 @@
 layout: layouts/base.njk
 permalink: /guides/command-line/
 title: The command line
-summary: mdword, every command and every option, and how it decides which way the data has to go.
-section: Guides
+summary: mdword in full — every command, every option, and how it decides which way the data has to go.
+section: Reference
 order: 1
 ---
 

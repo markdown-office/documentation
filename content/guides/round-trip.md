@@ -4,7 +4,7 @@ permalink: /guides/round-trip/
 title: Round trips
 summary: Markdown to a document and back. What comes out the same, and the five things that do not.
 section: Guides
-order: 4
+order: 2
 ---
 
 Both directions are the same interface, so a round trip is two calls:

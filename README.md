@@ -33,31 +33,38 @@ including one where an example claimed a Word footnote that the converter did no
 
 ```text
 content/
-├── index.md
-├── getting-started.md
-├── directives/       index.md, syntax.md, word.md, presentation.md
-├── guides/           configuration-word.md, command-line.md, themes.md, images.md, round-trip.md
-├── reference/        errors.md
-├── suite/            spreadsheet.md
-├── api/              index.md
-└── llms/             llms.txt.njk, pages.json.njk
+├── index.md                 the home page
+├── word/index.md            Markdown Word
+├── presentation/index.md    Markdown Presentation
+├── directives/              index.md, syntax.md
+├── guides/                  themes.md, images.md, round-trip.md
+├── reference/               errors.md, command-line.md
+├── suite/                   spreadsheet.md
+└── llms/                    llms.txt.njk, pages.json.njk
 ```
+
+There are two entrypoints, one per library, and each is three things in order: **the dialect**
+(basic, then frontmatter and themes, then directives), **the command line**, **the library**.
 
 Four frontmatter keys, all required:
 
 ```yaml
 ---
 layout: layouts/base.njk
-permalink: /guides/themes/
-title: Themes and layout
+permalink: /word/
+title: Markdown Word
 summary: One line. It is the sidebar text and the llms.txt entry.
-section: Guides
-order: 2
+section: Markdown Word
+order: 0
 ---
 ```
 
-`section` must be one of the five in `SECTIONS` in `eleventy.config.js`. A page naming something
+`section` must be one of the six in `SECTIONS` in `eleventy.config.js`. A page naming something
 else is listed under **Elsewhere** rather than dropped, so a typo is visible instead of silent.
+
+**Every route has a Markdown representation**, and the build fails without one. It is checked
+rather than assumed: a page that reached the site without a mirror looks perfect in a browser and
+is invisible to anything reading it as Markdown, and nothing else would have said so.
 
 ## Writing an example
 
@@ -79,6 +86,13 @@ The shortcode emits an HTML comment and the layout expands it. That is not indir
 sake: a shortcode's output goes back into the Markdown *before* markdown-it runs, so a shortcode
 returning `<figure>` has its own contents read as Markdown. An `**` in a sample heading becomes
 `<strong>`, and the backticks around a sample fence open a code block that swallows the page.
+
+## Highlighting
+
+Shiki, as a pass over the finished HTML rather than inside the Markdown pipeline. An example's
+source is not a code block at markdown-it time — the tag is a comment and the layout expands it
+afterwards — so anything running during the Markdown pass would never have seen one. A single pass
+over the finished pages reaches both the prose blocks and the example sources.
 
 ## Reading it as a machine
 

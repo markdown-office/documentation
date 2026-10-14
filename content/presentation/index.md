@@ -1,0 +1,291 @@
+---
+layout: layouts/base.njk
+permalink: /presentation/
+title: Markdown Presentation
+summary: Slidev-inspired Markdown into .pptx — layouts, themes, click builds and speaker notes, extended with directives. One direction only.
+section: Markdown Presentation
+order: 0
+---
+
+The dialect and the library. There is no command-line tool for this half yet.
+
+```bash
+composer require markdown-presentation/markdown-presentation
+```
+
+PHP 8.2 or newer, with `ext-dom`, `ext-gd` and `ext-zip`. `ext-imagick` is optional and buys SVG.
+
+**One direction.** Markdown to `.pptx`, and nothing back. There is no reader class, no reverse
+entry point, and `PresentationRenderer` has two methods: `render()` and `overflows()`.
+
+---
+
+## 1. The Markdown dialect
+
+### Basic
+
+**Slidev-inspired.** A deck is Markdown split on `---`. The splitter is a **port of Slidev's
+`parseSync`** pinned to a commit, so a deck written for Slidev splits the same way here; the 21
+places it deliberately does not are written down in
+[Slidev, and where it differs](/directives/presentation/#slidev-and-where-it-differs).
+
+{% example "A deck with a title slide and a content slide" %}
+````md presentation
+# Markdown Office
+
+Convert a Markdown document into a deck that opens in PowerPoint.
+
+---
+
+## Why a slide and not a page
+
+- One `---`, one slide
+- A theme decides the type, the colour and the grid
+- `::click` builds the slide up on a click
+````
+{% endexample %}
+
+Within a slide it is CommonMark plus tables, strikethrough and fenced code. `---` separates
+slides and **cannot be a thematic break** — use `***`.
+
+`----` is also a delimiter, so a YAML document as slide content needs a different fence.
+
+### Extended: frontmatter and themes
+
+The deck's own configuration goes in the frontmatter of slide 1. Every key is in a **closed set of
+seven**, and anything outside it fails the build with a message naming what would have worked.
+
+| Key | Type | Default | |
+| --- | --- | --- | --- |
+| `title` | string | `null` | the slide's title |
+| `name` | string | `null` | a fallback for `title` |
+| `level` | integer ≥ 1 | the heading's own depth | the depth a title is drawn at |
+| `layout` | one of eight roles | `content` | which layout to use |
+| `theme` | string | `default` | **slide 1 only** |
+| `author` | string | the theme's | **slide 1 only** |
+| `description` | string | `null` | **slide 1 only** |
+
+The eight layout roles: `title`, `content`, `two-column`, `section`, `blank`, `image-text`,
+`image-title`, `image-slide`.
+
+{% example "Every frontmatter key on a deck" %}
+````md presentation
+---
+theme: corporate-dark
+title: The quarter in three slides
+author: Markdown Office
+description: What changed, what it cost, and what happens next.
+---
+
+# The quarter
+
+## What changed
+
+- Two products shipped
+- Three customers renewed
+````
+{% endexample %}
+
+#### The whole of `theme.yml`
+
+| Key | Type | Default |
+| --- | --- | --- |
+| `name` | string | **required**, non-empty |
+| `description` | string | `null` |
+| `author` | string | `null` |
+| `dark` | boolean | `false` — boolean only; `dark: yes` is refused |
+| `colors:` | mapping | the twelve slots below |
+| `fonts:` | mapping | Calibri / Calibri / Consolas |
+| `style:` | mapping | the geometry below |
+
+The twelve colour slots — `dk1` `lt1` `dk2` `lt2` `accent1`…`accent6` `hlink` `folHlink` — with
+four readable aliases accepted: `dark1`, `light1`, `dark2`, `light2`, `hyperlink`,
+`followedHyperlink`.
+
+#### The whole of `style:`
+
+| Key | Type | Default | Minimum |
+| --- | --- | --- | --- |
+| `margin` | int, px | 40 | 1 |
+| `gutter` | int, px | 20 | 1 |
+| `block` | int, px | 12 | 1 |
+| `rule` | int, px | 2 | 1 |
+| `body` | int, pt | 16 | 1 |
+| `title` | int, pt | 28 | 1 |
+| `cover` | int, pt | 40 | 1 |
+| `section` | int, pt | 44 | 1 |
+| `headings` | list of int, pt | `[22, 20, 18, 16, 14]` | each ≥ 1 |
+| `leading` | number | 1.2 | 1.0 |
+| `heading-weight` | `bold` or `regular` | `bold` | |
+| `heading-ink` | `ink` or `accent` | `ink` | |
+
+Four themes ship: `default`, `corporate-dark`, `minimal`, `dense`. `minimal` has more margin and
+less ink; `dense` has less margin and smaller type — those are the two axes a deck is usually
+fighting over, and they are separate keys so you can move one.
+
+Resolution is a path, then `<cwd>/themes/<name>`, then the package's own. **No silent fallback to
+`default`**: a name that does not resolve raises `ThemeNotFound` listing the ones that do.
+
+More, including `layouts.yml` and every built-in theme's numbers: [Themes and layout](/guides/themes/).
+
+### Extended: directives
+
+Four, and the set is closed — anything outside it is refused by name rather than drawn as a
+paragraph.
+
+| Written | Does |
+| --- | --- |
+| `::click` | advances the build by one step |
+| `::click=N` | advances to step `N` |
+| `:::click` … `:::` | everything between the fences is at one step |
+| `::column` | moves the next blocks into the next column |
+| `::note` … `::` | the slide's speaker note |
+
+All must be alone on their line. Names are case-insensitive.
+
+{% example "A slide that builds up, with a speaker note" %}
+````md presentation
+## Three things
+
+- One
+- Two
+
+::click
+
+- Two is the interesting one
+- Three
+
+::click
+
+- All three
+
+::note
+Say "two" slowly. That is the point of the slide.
+::
+````
+{% endexample %}
+
+`::click=N` must be greater than the current step and no more than **500**. Step 1 is not a click
+— it is what is on the slide before anyone clicks — so a step nothing was written on costs no
+click.
+
+`::column` takes **no argument**; the layout decides how many columns there are, and writing more
+markers than that is `UnsupportedColumn`.
+
+The closer for `:::click` is **exactly three colons**. An unclosed region is refused rather than
+running to the end of the slide.
+
+More, including the refusal table and the three things that look like they work and do not:
+[Presentation directives](/directives/presentation/).
+
+---
+
+## 2. Command line
+
+**There is none.** The package declares no `bin`, and `examples/build.php` in the repository is
+the closest thing — it converts a directory of Markdown files and renders page images of each.
+
+A shell loop is the whole substitute:
+
+```bash
+for f in decks/*.md; do
+  php -r 'require "vendor/autoload.php";
+    (new MarkdownPresentation\Render\PresentationRenderer())
+      ->render((new MarkdownPresentation\Document\DeckParser())->parse(file_get_contents($argv[1])), $argv[2]);' \
+    "$f" "${f%.md}.pptx"
+done
+```
+
+The Word half has a real CLI — see [Markdown Word → command line](/word/#2-command-line).
+
+---
+
+## 3. As a library
+
+Two calls, and there is no single facade class.
+
+```php
+use MarkdownPresentation\Document\DeckParser;
+use MarkdownPresentation\Render\PresentationRenderer;
+
+$deck = (new DeckParser())->parse($markdown);
+
+(new PresentationRenderer())->render($deck, 'deck.pptx');
+```
+
+### Reading the deck without writing it
+
+Useful for a linter, an index, or a check that runs before anything is built:
+
+```php
+$deck = (new DeckParser())->parse($markdown);
+
+echo $deck->frontmatterValue('title'), "\n";
+echo $deck->count(), " slides\n";
+
+foreach ($deck->slides() as $slide) {
+    echo $slide->index(), ' ', $slide->title(), "\n";
+    echo $slide->note(), "\n";
+}
+```
+
+```text
+0 One
+1 Two
+```
+
+### The rendering pipeline
+
+`render()` checks every slide's frontmatter **before** anything is built, so a deck whose fourth
+slide names a directive nobody reads fails before it has written a byte. It then resolves the
+theme, resolves the layout roles, builds the masters, and writes one slide per source slide.
+
+Five passes run over the written package afterwards — `NotesColourMapPass`, `NotesChainPass`,
+`MeasureRoundingPass`, `PlaceholderPass` and `TimingPass` — because PHPPresentation cannot write
+what PowerPoint needs. The rounding pass exists because a fractional `a:spcPts` value makes
+PowerPoint open the deck as `[Repaired]`.
+
+### Ceilings
+
+| | |
+| --- | --- |
+| `MAX_SLIDES` | 1000 |
+| `MAX_STEP` | 500 |
+| `MAX_PIXELS` | 16,777,216 — 4096 × 4096, enforced on the file header |
+
+The pixel ceiling is worth a moment. The obvious implementation of it is wrong: measuring a
+raster means decoding it, and decoding is what allocates the memory you were trying to bound. Both
+halves read the size from the header without drawing, so a **152-byte** file declaring a
+16000-square drawing is refused in 0.05 s with a 4 MB peak.
+
+More, and the reason there is no second line of defence: [Images](/guides/images/).
+
+### Errors
+
+`MarkdownPresentation\Exception\Exception` covers everything this half reports, so one `catch` does
+not also catch the failures of the libraries underneath. The failures a deck author can fix extend
+`Exception\InvalidInput` below it.
+
+```php
+use MarkdownPresentation\Exception\Exception as DeckException;
+use MarkdownPresentation\Exception\InvalidInput;
+
+try {
+    (new PresentationRenderer())->render($deck, 'out.pptx');
+} catch (InvalidInput $error) {
+    fwrite(STDERR, $error->getMessage());   // names what would have worked
+}
+```
+
+One sits beside those two rather than under `InvalidInput`: `Exception\UnreadablePackage`. Nothing
+a deck names fixes a package that is not a package.
+
+The whole catalogue is on [Errors](/reference/errors/).
+
+---
+
+## Next
+
+[Markdown Word](/word/) · [The directive syntax](/directives/syntax/) ·
+[Presentation directives](/directives/presentation/) · [Themes and layout](/guides/themes/) ·
+[Images](/guides/images/) · [Errors](/reference/errors/)

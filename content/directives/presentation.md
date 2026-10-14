@@ -116,6 +116,62 @@ Read this out loud.
 Case-insensitive, whitespace-tolerant, and the closer is anchored to the end of the slide, so two
 `::note` blocks on one slide become **one** note carrying both. An unclosed note is refused.
 
+## Slidev, and where it differs
+
+The splitter is a **port of Slidev's `parseSync`**, pinned to a commit of that file. A deck that
+splits the way a Slidev deck splits is the whole point: the dialect that people already write
+for Slidev is the one worth reading, and matching it matters more than being tidy.
+
+It is a port and not a clone, and the differences are recorded rather than discovered later.
+Every fixture in `tests/fixtures/slidev/expected.json` was run through Slidev's own
+`parseSync` at that commit, and each divergence below is written down with its reason in
+`tests/fixtures/slidev/divergences.json`. There are **21** of them, in four groups.
+
+### Frontmatter it refuses
+
+| Case | Why this library differs |
+| --- | --- |
+| `list in frontmatter` | A frontmatter block that is a YAML list carries no keys to read configuration from, so it is refused instead of stored as something no caller asked for. |
+| `scalar frontmatter` | A frontmatter block that is a YAML scalar is not a mapping, and a scalar where a mapping was expected is a mistake rather than an empty configuration. |
+| `broken yaml frontmatter` | Slidev keeps parsing invalid YAML and takes what it can. A deck author gets an error naming the slide instead, because a silently half-read block is how a deck comes out with the wrong title and nobody knows why. |
+| `title not a string` | Slidev takes the value as the title whatever its type. A number is not a title, so it is refused rather than rendered. |
+| `level not an int` | Slidev passes the value through to whatever consumes the level. A level that is not an integer is refused instead. |
+| `fenced yaml frontmatter` | Slidev reads a slide that opens with a fenced yaml block as frontmatter. Here it would be a code block, so the ambiguous shape is refused rather than read the other way round. |
+
+### The delimiter and the comments around it
+
+| Case | Why this library differs |
+| --- | --- |
+| `comment closed on the delimiter line` | The note is empty. An empty note is no note, so there is none rather than an empty string. |
+| `empty trailing comment` | The note is empty. An empty note is no note, so there is none rather than an empty string. |
+| `indented opener, delimiter, flush closer` | The same consequence seen from the other side: the `---` is inside the block, so the block runs to the flush closer and the delimiter no longer splits anything. |
+| `de-indented fence` | A closing fence may be indented less than the opening one. Slidev matches the close with `startsWith` against the raw line, so the opener's indentation has to be repeated exactly and an otherwise ordinary block is split by the delimiter inside it. |
+| `indented opener closed flush, delimiter between` | A consequence of the closing fence not having to repeat the opener's indentation: the flush closer closes the block, so the `---` between them is a delimiter again and splits the slide. |
+| `html comment on one line` | A speaker note is `::note` on a line of its own, its text, and a closing `::`. An HTML comment after a slide's last line is the note Slidev reads it as; here it is a deck written for another tool, left on the slide and refused by the renderer rather than taken. |
+| `comment ending the slide` | A speaker note is `::note` on a line of its own, its text, and a closing `::`. An HTML comment after a slide's last line is the note Slidev reads it as; here it is a deck written for another tool, left on the slide and refused by the renderer rather than taken. |
+| `two trailing comments` | A speaker note is `::note` on a line of its own, its text, and a closing `::`. An HTML comment after a slide's last line is the note Slidev reads it as; here it is a deck written for another tool, left on the slide and refused by the renderer rather than taken. |
+| `comment with a delimiter inside the note` | A speaker note is `::note` on a line of its own, its text, and a closing `::`. An HTML comment after a slide's last line is the note Slidev reads it as; here it is a deck written for another tool, left on the slide and refused by the renderer rather than taken. |
+
+### Fences, which are CommonMark's rules rather than Slidev's
+
+| Case | Why this library differs |
+| --- | --- |
+| `tildes are not a fence` | Tildes fence a code block in CommonMark, so the `---` between them is code rather than a delimiter. Slidev recognises only backticks and splits the slide, leaving the block split across two slides. |
+| `unterminated fence` | A fence that is never closed runs to the end of the deck, which is what CommonMark says one is. Slidev leaves the index where it was and reads every following line as ordinary content, so a `---` inside an unclosed fence splits the deck and the next slide opens with a literal delimiter. |
+| `unterminated tilde` | The same for a tilde fence, which Slidev does not recognise as a fence at all. |
+| `tilde fence` | Tildes fence a code block in CommonMark. Slidev matches a backtick run only, so a `~~~` block is read as prose and a `---` inside it splits the deck. |
+| `tilde fence long` | A tilde run of any length fences a block, as CommonMark has it. |
+
+### Levels
+
+| Case | Why this library differs |
+| --- | --- |
+| `level zero` | Slidev keeps the heading depth because a zero is falsy, which is a truthiness check where a range was meant. A heading level below one is refused instead. |
+
+None of these move a slide boundary for an ordinary deck. They are the corners: an
+unterminated fence, a comment on the delimiter line, a `level: 0`. A deck written for Slidev
+splits here the way it does there.
+
 ## Frontmatter directives
 
 Every key of every slide's frontmatter must be one of these seven:
@@ -166,9 +222,12 @@ Lead with the renewal number. It is the one people remember.
 
 ## What is refused, and why
 
-Slidev is the compatibility target for the **splitter**, not for the renderer. Everything Slidev
-draws with something this package does not have is refused by name rather than drawn as a
-paragraph:
+The splitter is a **port** of Slidev's `parseSync`, not a clone of it: a deck that splits the way
+Slidev splits is the point, and the places it deliberately does not are written down — see
+[Slidev, and where it differs](/directives/presentation/#slidev-and-where-it-differs).
+
+The renderer shares none of that. Everything Slidev draws with something this package does not
+have is refused by name rather than drawn as a paragraph:
 
 | Written | Refused as |
 | --- | --- |

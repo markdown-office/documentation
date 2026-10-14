@@ -807,3 +807,46 @@ img {
 .example__outline li {
   margin: 0.15rem 0;
 }
+
+/* ---------- highlighted code ---------- */
+
+/* Shiki writes its own colours inline and sets a background on the <pre>, which would override
+   the panel background the rest of the page uses. Both are dropped here so a highlighted block
+   and a plain one are the same object: same padding, same border, same background. */
+.shiki {
+  margin: 1.25rem 0;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--panel) !important;
+  overflow-x: auto;
+  tab-size: 2;
+}
+
+.shiki code {
+  font: 13px/1.6 var(--mono);
+  background: none;
+  display: block;
+  padding: 1rem 1.15rem;
+  color: inherit;
+}
+
+.shiki .line {
+  display: block;
+  min-height: 1em;
+}
+
+/* A long line in a sample is worth seeing in full rather than wrapped: the whole point of the
+   block is that it is copyable, and a wrapped fence looks like something else. */
+.shiki code {
+  white-space: pre;
+}
+
+pre:not(.shiki) {
+  font: 13px/1.6 var(--mono);
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 1rem 1.15rem;
+  overflow-x: auto;
+  margin: 1.25rem 0;
+}

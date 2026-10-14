@@ -23,7 +23,7 @@ browser, no export button.
 | --- | --- | --- |
 | **Markdown → document** | `.docx` `.odt` `.rtf` | `.pptx` |
 | **document → Markdown** | **yes**, for standard Markdown | **no** — one direction only |
-| **Markdown dialect** | CommonMark + GitHub Flavored | Slidev |
+| **Markdown dialect** | CommonMark + GitHub Flavored | Slidev-inspired |
 | **Look and feel** | frontmatter + themes | frontmatter + themes |
 | **Special features** | directives | directives |
 | **What those are** | `::toc`, `:footnote` | `::click`, `:::click`, `::column`, `::note` |
@@ -60,8 +60,8 @@ field.</p>
 <li>
 <a class="card" href="/directives/presentation/">
 <h3>Markdown Presentation</h3>
-<p>Markdown to <code>.pptx</code>, with a Slidev-compatible splitter. Layouts, themes, columns,
-click builds and speaker notes — and a refusal for anything it will not draw.</p>
+<p>Markdown to <code>.pptx</code>, with a splitter ported from Slidev's. Layouts, themes,
+columns, click builds and speaker notes — and a refusal for anything it will not draw.</p>
 <code>markdown-presentation/markdown-presentation</code>
 </a>
 </li>
@@ -80,14 +80,15 @@ parser extension, for your own directives if you want one.</p>
 <div class="hero__rule">Start here</div>
 
 <ul class="actions">
-<li><a class="primary" href="/getting-started/">Get started</a></li>
-<li><a class="ghost" href="/directives/">The directives</a></li>
+<li><a class="primary" href="/word/">Markdown Word</a></li>
+<li><a class="primary" href="/presentation/">Markdown Presentation</a></li>
+<li><a class="ghost" href="/directives/syntax/">The directive syntax</a></li>
 </ul>
 
 ## Every example here is a real document
 
 Each one is converted by the library it documents while this page is built, and can be
-downloaded and opened. If an example stops working, the build stops — which is how this page came
+downloaded and opened. If an example stops working, the build stops — which is how this site came
 to say that `:footnote[…]` produces no footnote.
 
 ## Read it over HTTP

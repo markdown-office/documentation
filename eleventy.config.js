@@ -1,10 +1,11 @@
 import { createHash } from "node:crypto";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { EleventyHtmlBasePlugin } from "@11ty/eleventy";
 import { createRequire } from "node:module";
+import { createHighlighter } from "shiki";
 
 // js-yaml has moved between ESM and CommonMark across majors; going through `createRequire`
 // loads whichever it currently is rather than betting on an import shape.
@@ -28,10 +29,11 @@ const here = dirname(fileURLToPath(import.meta.url));
  * nobody will find and dropping it would hide the mistake rather than fix it.
  */
 const SECTIONS = [
-  ["Getting started", "Install it, convert one file, change one thing."],
-  ["Directives", "The one syntax both halves read, and what each half draws."],
+  ["Markdown Word", "The dialect, the command line, and the library."],
+  ["Markdown Presentation", "The dialect, and the library."],
+  ["Directives", "The one syntax both read, and what each draws."],
   ["Guides", "The parts a reader needs once the first file worked."],
-  ["Reference", "Every key, every value, every default."],
+  ["Reference", "Every key, every value, every error."],
   ["The suite", "The other packages, and where this is going."],
 ];
 
@@ -83,6 +85,7 @@ export default function (eleventyConfig) {
       .replace("<svg ", '<svg class="wordmark" '),
   );
 
+  eleventyConfig.on("eleventy.after", highlight);
   eleventyConfig.on("eleventy.after", writeMirrors);
 
   return {
@@ -232,9 +235,12 @@ function head(built, title) {
 }
 
 function sourceOf(source) {
+  // Open, not folded. A reader came to this page for the Markdown, and the document below is
+  // what proves it — so the Markdown is the first thing in the figure rather than a disclosure
+  // under a summary they have to guess is there.
   return (
-    '<details class="example__source"><summary>The Markdown</summary>' +
-    `<pre class="code"><code>${escape(source)}</code></pre></details>`
+    '<details class="example__source" open><summary>The Markdown</summary>' +
+    `<pre><code class="language-markdown">${escape(source)}</code></pre></details>`
   );
 }
 
@@ -290,6 +296,59 @@ function readManifest() {
 }
 
 /**
+ * Syntax-highlight every code block on every page, as a pass over the finished HTML.
+ *
+ * After the build rather than during it, for a reason that took a while to see: an example's
+ * source is not a code block at markdown-it time. The `{% example %}` tag becomes a comment, the
+ * layout expands it, and only *then* is there a `<pre>` holding the Markdown — so anything that
+ * ran inside the Markdown pipeline would never have seen it. One pass over the finished pages
+ * catches both the prose blocks and the example sources, which is the only place a single pass
+ * can reach.
+ *
+ * Shiki rather than a class-per-token scheme because the colours are the point: a Markdown example
+ * on a page about Markdown is unreadable as flat monospace, and guessing at token classes by
+ * hand gets them wrong. The theme is the light one, chosen to sit on the same background as the
+ * rest of the page rather than looking like a different website embedded in this one.
+ */
+async function highlight({ results, dir }) {
+  const pages = (results ?? []).filter((result) => result.outputPath?.endsWith(".html"));
+  if (!pages.length) {
+    return;
+  }
+
+  const highlighter = await createHighlighter({
+    themes: ["github-light"],
+    langs: ["markdown", "php", "bash", "yaml", "json", "text", "diff"],
+  });
+
+  for (const { outputPath } of pages) {
+    const html = await readFile(outputPath, "utf8");
+
+    // markdown-it writes `<pre><code class="language-x">`; the example widget writes
+    // `<pre class="code"><code class="language-x">` so both shapes are found by one expression.
+    const marked = html.replace(
+      /<pre(?: class="code")?><code(?: class="language-([\w-]+)")?>([\s\S]*?)<\/code><\/pre>/g,
+      (_, language, code) => {
+        const text = code
+          .replace(/&lt;/g, "<")
+          .replace(/&gt;/g, ">")
+          .replace(/&quot;/g, '"')
+          .replace(/&#39;/g, "'")
+          .replace(/&amp;/g, "&");
+
+        const lang = highlighter.getLoadedLanguages().includes(language) ? language : "text";
+
+        return highlighter.codeToHtml(text, { lang, theme: "github-light" });
+      },
+    );
+
+    if (marked !== html) {
+      await writeFile(outputPath, marked);
+    }
+  }
+}
+
+/**
  * Write each page's Markdown beside its HTML, and assemble the whole set into `llms-full.txt`.
  *
  * Both are written from the source file rather than from the rendered page, because the rendered
@@ -313,7 +372,7 @@ async function writeMirrors({ results, dir }) {
       ...frontmatter(readFileSync(result.inputPath, "utf8")),
       source: readFileSync(result.inputPath, "utf8"),
     }))
-    .filter((page) => page.section && page.url !== "/");
+    .filter((page) => page.section);
 
   // Anything a template computed goes back on top of what the file declared.
   for (const result of results ?? []) {
@@ -349,6 +408,21 @@ async function writeMirrors({ results, dir }) {
         `---\n\n<!-- ${url} -->\n\n## ${title}\n\n${asMarkdown(source)}\n\nSource: ${url}\n`,
     )
     .join("");
+
+  // Every route, a Markdown representation. Checked rather than assumed: a page that reached the
+  // site without one is invisible to anything reading it as Markdown, and nothing else would say
+  // so — the page looks perfect in a browser.
+  const missing = (results ?? [])
+    .filter((result) => result.outputPath?.endsWith(".html"))
+    .filter((result) => !existsSync(result.outputPath.replace(/index\.html$/, "index.md")));
+
+  if (missing.length) {
+    throw new Error(
+      `No Markdown at ${missing.map((result) => result.url).join(", ")}. `
+        + "Every route needs one; a page that reaches the site without it is invisible to "
+        + "anything reading it as Markdown.",
+    );
+  }
 
   await writeFile(
     join(dir.output, "llms-full.txt"),

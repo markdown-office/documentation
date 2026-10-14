@@ -4,7 +4,7 @@ permalink: /guides/images/
 title: Images
 summary: What is carried, what is converted, what is refused, and the pixel ceiling that makes a 152-byte file expensive.
 section: Guides
-order: 3
+order: 1
 ---
 
 ## The decision

@@ -4,7 +4,7 @@ permalink: /guides/themes/
 title: Themes and layout
 summary: The twelve colour slots, the thirteen style keys, the eight layout roles, and the four themes that ship with the presentation package.
 section: Guides
-order: 2
+order: 0
 ---
 
 A theme is a directory. `theme.yml` is required; `styles.yml`, `layouts.yml` and

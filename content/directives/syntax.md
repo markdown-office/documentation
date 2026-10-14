@@ -1,3 +1,11 @@
+---
+layout: layouts/base.njk
+permalink: /directives/syntax/
+title: The directive syntax
+summary: Every rule of :name, ::name and :::name — names, labels, attributes, fences, and the four things that look like directives and are not.
+section: Directives
+order: 1
+---
 {% raw %}
 
 
