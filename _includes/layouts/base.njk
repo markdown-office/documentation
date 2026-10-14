@@ -1,0 +1,100 @@
+{%- set groups = collections.all | sections -%}
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{% if title %}{{ title }} — {% endif %}{{ suite.name }}</title>
+    <meta name="description" content="{{ summary }}" />
+    <link rel="canonical" href="{{ suite.canonical }}{{ page.url }}" />
+
+    {# The same page as it was written. A machine reading it wants the directive in front of it,
+       not a <pre> with HTML escaped inside it. #}
+    <link
+      rel="alternate"
+      type="text/markdown"
+      href="{{ page.url }}index.md"
+      title="{{ title }} as Markdown"
+    />
+
+    <link rel="icon" href="/assets/icon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="/assets/site.css" />
+    <meta property="og:title" content="{{ title }}" />
+    <meta property="og:description" content="{{ summary }}" />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="{{ suite.canonical }}{{ page.url }}" />
+    <meta name="twitter:card" content="summary_large_image" />
+  </head>
+
+  <body>
+    <a class="skip" href="#content">Skip to content</a>
+
+    <div class="shell">
+      <header class="side">
+        <a class="side__mark" href="/" aria-label="{{ suite.name }}, home">
+          {{ wordmark | safe }}
+        </a>
+
+        <nav aria-label="Documentation">
+          {%- for group in groups %}
+          <div class="side__section">
+            <h2>{{ group.title }}</h2>
+            <p>{{ group.note }}</p>
+            <ul>
+              {%- for entry in group.pages %}
+              <li>
+                <a href="{{ entry.url }}"{% if entry.url == page.url %} aria-current="page"{% endif %}
+                  >{{ entry.data.title }}</a
+                >
+              </li>
+              {%- endfor %}
+            </ul>
+          </div>
+          {%- endfor %}
+        </nav>
+      </header>
+
+      <main id="content" class="main">
+        <div class="wrap">
+          {%- if section %}
+          <div class="topbar">
+            <span>{{ section }}</span>
+            <span class="topbar__spacer"></span>
+            <a href="/llms.txt">llms.txt</a>
+            <a href="/llms-full.txt">llms-full.txt</a>
+            <a href="/pages.json">pages.json</a>
+          </div>
+          {%- endif %}
+
+          {{ content | expandExamples | safe }}
+
+          {%- if section %}
+          {# Previous and next, computed by a filter: Nunjucks has no `where`, and a
+             collection walked by hand in the layout is a loop that has to be
+             right on every page. #}
+          {%- set neighbours = collections.all | pager(page.url) -%}
+          <nav class="pager" aria-label="Page navigation">
+            {%- if neighbours.before %}
+            <a href="{{ neighbours.before.url }}" rel="prev">
+              <span>Previous</span>
+              <strong>{{ neighbours.before.data.title }}</strong>
+            </a>
+            {%- endif %}
+            {%- if neighbours.after %}
+            <a href="{{ neighbours.after.url }}" rel="next">
+              <span>Next</span>
+              <strong>{{ neighbours.after.data.title }}</strong>
+            </a>
+            {%- endif %}
+          </nav>
+
+          <p class="colophon">
+            Every example on this page was built by the library it documents while this page was
+            built. <a href="{{ page.url }}index.md">This page as Markdown</a>.
+          </p>
+          {%- endif %}
+        </div>
+      </main>
+    </div>
+  </body>
+</html>

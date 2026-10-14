@@ -1,0 +1,25 @@
+---
+permalink: /llms.txt
+eleventyExcludeFromCollections: true
+---
+# {{ suite.name }}
+
+> One Markdown document becomes a Word document or a PowerPoint deck. In PHP, with no Office and
+> no binaries. Both halves read the same directive syntax. One part converts a document back to
+> Markdown as well.
+
+This documentation is built from Markdown, and every example in it was produced by the library
+it documents at the moment the site was built. The same pages are available as Markdown one page
+at a time, and there is a JSON index at /pages.json.
+
+{% for group in (collections.all | sections) %}
+## {{ group.title }}
+
+{% for entry in group.pages -%}
+- [{{ entry.data.title }}]({{ suite.canonical }}{{ entry.url }}): {{ entry.data.summary }}
+{% endfor %}
+{%- endfor %}
+## Optional
+
+- [Every page in one file](llms-full.txt): the whole set as one Markdown document.
+- [The index as JSON](pages.json): section, title, summary and URL for each page.

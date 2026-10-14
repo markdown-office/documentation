@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg role="img" aria-label="Markdown Office" preserveAspectRatio="xMinYMid meet" width="1000" height="337" viewBox="0 0 1000 337" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve">
+    <g transform="matrix(4.366812,0,0,4.366812,0,-39.30131)">
+        <g transform="matrix(1,0,0,1,-0.397656,2.5)">
+            <g>
+                <g transform="matrix(0.9,0,0,0.9,0,0)">
+                    <path d="M9,84L9,16L27,16L41,30L41,51L30.5,51L50,72L50,84L9,84Z" style="fill:none;fill-rule:nonzero;stroke:rgb(29,78,216);stroke-width:2.5px;"/>
+                </g>
+                <g transform="matrix(0.9,0,0,0.9,0,0)">
+                    <path d="M41,30L27,30L27,16" style="fill:none;fill-rule:nonzero;stroke:rgb(29,78,216);stroke-width:2.13px;"/>
+                </g>
+                <g transform="matrix(0.9,0,0,0.9,0,0)">
+                    <path d="M50,84L50,72L69.5,51L59,51L59,30L73,16L91,16L91,84L50,84Z" style="fill:none;fill-rule:nonzero;stroke:rgb(234,88,12);stroke-width:2.5px;"/>
+                </g>
+                <g transform="matrix(0.9,0,0,0.9,0,0)">
+                    <path d="M59,30L73,30L73,16" style="fill:none;fill-rule:nonzero;stroke:rgb(234,88,12);stroke-width:2.13px;"/>
+                </g>
+            </g>
+            <g transform="matrix(1,0,0,1,108,41)">
+                <text textLength="115.59" lengthAdjust="spacingAndGlyphs" x="0px" y="0px" style="font-family:'Menlo-Bold', 'Menlo', monospace;font-weight:700;font-size:24px;fill:rgb(15,23,42);">markdown</text>
+            </g>
+            <g transform="matrix(1,0,0,1,108,60.2)">
+                <g transform="matrix(13,0,0,13,15.65332,0)">
+                </g>
+                <g transform="matrix(13,0,0,13,19.56665,0)">
+                </g>
+                <text textLength="39.13" lengthAdjust="spacingAndGlyphs" x="0px" y="0px" style="font-family:'Menlo-Regular', 'Menlo', monospace;font-size:13px;fill:rgb(37,99,235);">ofﬁce</text>
+            </g>
+        </g>
+    </g>
+</svg>
+

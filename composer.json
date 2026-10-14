@@ -1,0 +1,85 @@
+{
+    "name": "markdown-office/documentation",
+    "description": "The documentation site for the Markdown Office suite: one generator, the real libraries rendering their own examples.",
+    "type": "project",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Fabian Graßl",
+            "email": "mail@fabiangrassl.de"
+        }
+    ],
+    "require": {
+        "php": "^8.2",
+        "ext-dom": "*",
+        "ext-gd": "*",
+        "ext-mbstring": "*",
+        "ext-zip": "*",
+        "league/commonmark": "^2.10",
+        "markdown-office/commonmark-generic-directives": "0.2.0",
+        "markdown-office/markdown-word": "dev-main",
+        "markdown-presentation/markdown-presentation": "dev-main"
+    },
+    "repositories": [
+        {
+            "type": "path",
+            "url": "../commonmark-generic-directives",
+            "options": {
+                "symlink": true,
+                "versions": {
+                    "markdown-office/commonmark-generic-directives": "0.2.0"
+                }
+            }
+        },
+        {
+            "type": "path",
+            "url": "../markdown-word",
+            "options": {
+                "symlink": true,
+                "versions": {
+                    "markdown-office/markdown-word": "dev-main"
+                }
+            }
+        },
+        {
+            "type": "path",
+            "url": "../markdown-presentation",
+            "options": {
+                "symlink": true,
+                "versions": {
+                    "markdown-presentation/markdown-presentation": "dev-main"
+                }
+            }
+        }
+    ],
+    "require-dev": {
+        "pestphp/pest": "^5.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "MarkdownOffice\\Documentation\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "MarkdownOffice\\Documentation\\Tests\\": "tests/"
+        }
+    },
+    "config": {
+        "sort-packages": true,
+        "allow-plugins": {
+            "pestphp/pest-plugin": true
+        }
+    },
+    "scripts": {
+        "build": "@php build",
+        "serve": "@php build --watch",
+        "test": "pest",
+        "check": [
+            "@php build --strict",
+            "pest"
+        ]
+    },
+    "minimum-stability": "dev",
+    "prefer-stable": true
+}

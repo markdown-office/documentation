@@ -1,0 +1,199 @@
+---
+layout: layouts/base.njk
+permalink: /directives/presentation/
+title: Presentation directives
+summary: ::click, :::click, ::column and ::note — plus the closed set of frontmatter keys, and everything the deck will refuse by name.
+section: Directives
+order: 3
+---
+
+Markdown Presentation splits its vocabulary in two: **frontmatter keys**, which are configuration,
+and **in-body colon markers**, which are instructions. Both are closed sets, and both fail the
+build with a message naming what would have worked.
+
+## In-body markers
+
+| Written | Shape | What it does |
+| --- | --- | --- |
+| `::click` | leaf | Advances the build by one step |
+| `::click=N` | leaf | Advances to step `N` |
+| `:::click` … `:::` | container | Everything between the fences is at one step |
+| `::column` | leaf | Moves the next blocks into the next column |
+| `::note` … `::` | container | The slide's speaker note |
+
+All must be alone on their line. Leading spaces are fine; four spaces of indent is a code block.
+Names are case-insensitive.
+
+### `::click` — building a slide up
+
+```markdown
+## Three things
+
+- One
+- Two
+
+::click
+
+- Two is the interesting one
+- Three
+
+::click=3
+
+- All three
+```
+
+`::click` advances by one. `::click=N` jumps to step `N`, and `N` must be greater than the
+current step and no more than **500**.
+
+Step 1 is not a click — it is what is on the slide before anyone clicks — so a step nothing was
+written on costs no click, and the first `::click` after a heading is the first click.
+
+{% example %}
+````md presentation "A slide that builds up on three clicks, with a speaker note"
+## Three things
+
+- One
+- Two
+
+::click
+
+- Two is the interesting one
+- Three
+
+::click
+
+- All three
+
+::note
+Say "two" slowly. That is the point of the slide.
+::
+````
+{% endexample %}
+
+### `:::click` … `:::` — a step region
+
+Everything between the fences is drawn at the step the opener named, and the walk resets to that
+same step after the closer:
+
+```markdown
+:::click=2
+The second point, made visible.
+:::
+```
+
+The closer is **exactly three colons** — four inside a region is a paragraph. An unclosed region is
+refused rather than running to the end of the slide.
+
+### `::column` — two columns of content
+
+```markdown
+## Before and after
+
+::column
+
+Before: a file, and a hope.
+
+::column
+
+After: a file, and an answer.
+```
+
+The number of columns is the layout's. Writing more `::column` markers than the layout has columns
+is `UnsupportedColumn`, and the message names which slide and which column.
+
+`::column` takes **no argument** — `::column=2` is refused. The layout decides how many there are.
+
+### `::note` — the speaker note
+
+```markdown
+# One
+
+::note
+Read this out loud.
+::
+```
+
+Case-insensitive, whitespace-tolerant, and the closer is anchored to the end of the slide, so two
+`::note` blocks on one slide become **one** note carrying both. An unclosed note is refused.
+
+## Frontmatter directives
+
+Every key of every slide's frontmatter must be one of these seven:
+
+| Key | Type | Default | Slide |
+| --- | --- | --- | --- |
+| `title` | string | `null` | any |
+| `name` | string | `null` | any — a fallback for `title` |
+| `level` | integer ≥ 1 | the heading's own depth | any |
+| `layout` | one of eight roles | `content` | any |
+| `theme` | string | `default` | **first only** |
+| `author` | string | the theme's, else `markdown-presentation` | **first only** |
+| `description` | string | `null` | **first only** |
+
+The eight layout roles: `title`, `content`, `two-column`, `section`, `blank`, `image-text`,
+`image-title`, `image-slide`. Anything else — including Slidev's own `two-cols` — is refused with
+the list of what would have worked.
+
+A deck directive on a later slide is refused by name, because it is nearly always a slide that
+was meant to be the first one.
+
+{% example %}
+````md presentation "Every frontmatter key, on a deck that uses all seven"
+---
+theme: corporate-dark
+title: The quarter in three slides
+author: Markdown Office
+description: What changed, what it cost, and what happens next.
+---
+
+# The quarter
+
+## What changed
+
+::click
+
+- Two products shipped
+
+::click
+
+- Three customers renewed
+
+::note
+Lead with the renewal number. It is the one people remember.
+::
+````
+{% endexample %}
+
+## What is refused, and why
+
+Slidev is the compatibility target for the **splitter**, not for the renderer. Everything Slidev
+draws with something this package does not have is refused by name rather than drawn as a
+paragraph:
+
+| Written | Refused as |
+| --- | --- |
+| `<!-- v-click -->` | an HTML comment |
+| `<v-click>`, `<div v-if="x">` | an unsupported element |
+| `:::note` … `:::` | a container |
+| `::bogus`, `::left::`, `::right::` | a leaf directive |
+| `::note` with no closing `::` | an unclosed note |
+| `---` used as a rule | a slide delimiter — use `***` |
+
+That list is the point of the package. The thing writing a deck may be a model, and a model can
+act on a message and cannot act on a deck that quietly came out wrong.
+
+## Three things that look like they work and do not
+
+These are worth stating because a reader would reasonably assume otherwise.
+
+**A marker inside a list item is drawn as text.** `- ::click` produces a list item whose content is
+literally `- ::click`. The refusal walk does not descend into a list, and a marker inside one would
+mean splitting a single list block into several.
+
+**`::click{foo=bar}` and `::click[label]` render as an empty paragraph** — not an error, and not as
+text. The marker patterns are anchored to the end of a line, so the brace and bracket forms fall
+through to the generic directive parser, whose output nothing translates. Write the bare form or
+`=N`.
+
+**A frontmatter block must start at the very first byte.** A deck whose source begins with a blank
+line has its `theme:` attributed to slide 2, and is refused for naming a deck directive there.

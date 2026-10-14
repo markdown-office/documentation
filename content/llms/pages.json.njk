@@ -1,0 +1,27 @@
+---
+permalink: /pages.json
+eleventyExcludeFromCollections: true
+---
+{% set groups = collections.all | sections %}
+{
+  "site": {{ suite.canonical | dump | safe }},
+  "summary": "One Markdown document becomes a Word document or a PowerPoint deck. In PHP, with no Office and no binaries.",
+  "sections": [
+{%- for group in groups %}
+    {
+      "title": {{ group.title | dump | safe }},
+      "note": {{ group.note | dump | safe }},
+      "pages": [
+{%- for entry in group.pages %}
+        {
+          "title": {{ entry.data.title | dump | safe }},
+          "summary": {{ entry.data.summary | dump | safe }},
+          "url": {{ (suite.canonical + entry.url) | dump | safe }},
+          "markdown": {{ (suite.canonical + entry.url + "index.md") | dump | safe }}
+        }{{ "," if not loop.last }}
+{%- endfor %}
+      ]
+    }{{ "," if not loop.last }}
+{%- endfor %}
+  ]
+}

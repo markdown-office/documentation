@@ -1,0 +1,21 @@
+{
+  "name": "markdown-office-documentation",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Documentation site for the Markdown Office suite. Eleventy builds the pages; PHP builds the examples.",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "examples": "php tools/render-examples.php",
+    "build": "npm run examples && eleventy",
+    "build:strict": "php tools/render-examples.php --strict && eleventy",
+    "serve": "npm run examples && eleventy --serve",
+    "clean": "rm -rf _site _examples _data/examples.json"
+  },
+  "devDependencies": {
+    "@11ty/eleventy": "^3.0.0"
+  },
+  "dependencies": {
+    "js-yaml": "^5.4.3"
+  }
+}

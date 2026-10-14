@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="38 38 724 724" width="512" height="512" role="img" aria-label="Markdown Office">
+  <g transform="matrix(9.515864,0,0,9.630641,-28.213867,-33.37886)">
+<g transform="matrix(9.515864,0,0,9.630641,-28.213867,-33.37886)">
+        <g transform="matrix(0.9,0,0,0.9,0,0)">
+            <path d="M9,84L9,16L27,16L41,30L41,51L30.5,51L50,72L50,84L9,84Z"/>
+        </g>
+        <g transform="matrix(0.9,0,0,0.9,0,0)">
+            <path d="M41,30L27,30L27,16"/>
+        </g>
+        <g transform="matrix(0.9,0,0,0.9,0,0)">
+            <path d="M50,84L50,72L69.5,51L59,51L59,30L73,16L91,16L91,84L50,84Z"/>
+        </g>
+        <g transform="matrix(0.9,0,0,0.9,0,0)">
+            <path d="M59,30L73,30L73,16"/>
+        </g>
+    </g>
+  </g>
+</svg>

@@ -1,0 +1,464 @@
+import { createHash } from "node:crypto";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import { dirname, join } from "node:path";
+import { EleventyHtmlBasePlugin } from "@11ty/eleventy";
+import { createRequire } from "node:module";
+
+// js-yaml has moved between ESM and CommonMark across majors; going through `createRequire`
+// loads whichever it currently is rather than betting on an import shape.
+const yaml = createRequire(import.meta.url)("js-yaml");
+
+// js-yaml renamed `parse` to `load` in v5 and moved between module systems on the way, so the
+// two names are both asked for rather than betting on which one this project has installed.
+const parseYaml = yaml.parse ?? yaml.load;
+
+const here = dirname(fileURLToPath(import.meta.url));
+
+/**
+ * The pages of the site, grouped for the sidebar.
+ *
+ * A hand-written menu is a menu that rots, and it rots silently: the page it names is deleted,
+ * the build still passes, and the link 404s for whoever clicks it. Building the menu from the
+ * collection makes that impossible — a page cannot be in the site and not in the menu.
+ *
+ * The five entries below are the whole structure. A page naming one of them is grouped under it;
+ * a page naming something else is listed last, because a section nobody declared is a page
+ * nobody will find and dropping it would hide the mistake rather than fix it.
+ */
+const SECTIONS = [
+  ["Getting started", "Install it, convert one file, change one thing."],
+  ["Directives", "The one syntax both halves read, and what each half draws."],
+  ["Guides", "The parts a reader needs once the first file worked."],
+  ["Reference", "Every key, every value, every default."],
+  ["The suite", "The other packages, and where this is going."],
+];
+
+/**
+ * What the PHP example builder produced, read once at startup.
+ *
+ * Read here rather than from Eleventy's `_data` directory because a shortcode has no access to
+ * the data cascade. A missing file is an empty manifest, not a crash: a first build with no
+ * examples yet should still render every page.
+ */
+const examples = readManifest();
+
+export default function (eleventyConfig) {
+  eleventyConfig.addPlugin(EleventyHtmlBasePlugin);
+
+  eleventyConfig.addPassthroughCopy({ "_includes/assets": "assets" });
+
+  // The examples are built by PHP before Eleventy runs and copied in whole, rather than written
+  // into the output directory by something Eleventy knows nothing about: Eleventy empties its own
+  // output on every build, and a preview image that survived that would be a preview of an
+  // example that no longer exists.
+  eleventyConfig.addPassthroughCopy({ "_examples": "examples" });
+
+  // Paired, because the tag wraps the fence; addShortcode would leave {% endexample %} as
+  // literal text for Nunjucks to choke on.
+  eleventyConfig.addPairedShortcode("example", example);
+  eleventyConfig.addFilter("expandExamples", expandExamples);
+  eleventyConfig.addFilter("sections", sectionGroups);
+  eleventyConfig.addFilter("pager", pager);
+
+  eleventyConfig.addGlobalData("suite", () => ({
+    name: "Markdown Office",
+    canonical: (
+      (process.env.MARKDOWN_OFFICE_CANONICAL ?? "https://markdown-office.dev").replace(
+        /\/+$/,
+        "",
+      ) + "/"
+    ),
+    sections: SECTIONS.map(([title, note]) => ({ title, note })),
+  }));
+
+  // The wordmark goes into the page rather than being fetched: it is above the fold on every
+  // page, and a 2 KB request before anything can be read is a delay nobody asked for. The
+  // `width` and `height` go so the stylesheet owns the size, and `role` and `aria-label` go
+  // because the link that wraps it already carries the wordmark's name.
+  eleventyConfig.addGlobalData("wordmark", () =>
+    readFileSync(join(here, "_includes/assets/logo.svg"), "utf8")
+      .replace(/\s(width|height|role|aria-label)="[^"]*"/g, "")
+      .replace("<svg ", '<svg class="wordmark" '),
+  );
+
+  eleventyConfig.on("eleventy.after", writeMirrors);
+
+  return {
+    dir: {
+      input: "content",
+      output: "_site",
+      includes: "../_includes",
+      data: "../_data",
+    },
+    markdownTemplateEngine: "njk",
+    htmlTemplateEngine: "njk",
+    templateFormats: ["md", "njk"],
+  };
+}
+
+/**
+ * `{% example "A title" %} … {% endexample %}` — a placeholder for an example, expanded by the
+ * layout once the Markdown is done.
+ *
+ * The paired tag rather than a bare fence, because the fence has to stay a fence for the Markdown
+ * parser to read it as one, and a page that documents this syntax needs to show an example without
+ * building it.
+ *
+ * This returns an HTML comment and nothing else, and that is the whole trick. A shortcode's
+ * return value goes back into the Markdown *before* markdown-it runs, so a shortcode that
+ * returned `<figure>` would have its own contents read as Markdown: the `**` in a sample heading
+ * became `<strong>`, and the backticks around the sample fence opened a code block that swallowed
+ * the rest of the page. An HTML comment survives Markdown untouched and is expanded afterwards by
+ * {@see expandExamples}, where the output is the last thing to touch it.
+ *
+ * The title travels in the placeholder rather than in the manifest, because the manifest is keyed
+ * by content and two pages may show the same document under different names.
+ */
+function example(content, ...args) {
+  const title = String(args[0] ?? "")
+    .trim()
+    .replace(/^["']|["']$/g, "");
+  const source = content.trim();
+  const hash = hashOf(source);
+
+  return `<!--mo-example:${hash}:${Buffer.from(title, "utf8").toString("base64")}-->`;
+}
+
+/**
+ * Turn every `<!--mo-example:…-->` placeholder into the markup for that example.
+ *
+ * Applied to the finished page in the layout. `content` is HTML by this point, so the result is
+ * inserted as-is rather than parsed, and the only thing to escape is what came out of a document.
+ */
+function expandExamples(html) {
+  return String(html ?? "").replace(
+    /<!--mo-example:([0-9a-f]{16}):([A-Za-z0-9+/=]*)-->/g,
+    (_, hash, encoded) => render(hash, Buffer.from(encoded, "base64").toString("utf8")),
+  );
+}
+
+function render(hash, title) {
+  const built = examples[hash];
+  const source = built?.source ?? "";
+  const language = source.match(/^`{3,}md[ \t]+(word|presentation)/m)?.[1] ?? "";
+
+  if (!built) {
+    return [
+      '<figure class="example example--missing">',
+      '<p class="example__failure"><strong>No build was found for this example.</strong>',
+      "Run <code>npm run examples</code> to build it",
+      language ? ` — it is tagged <code>md ${escape(language)}</code>.` : ".",
+      "</p></figure>",
+    ].join("");
+  }
+
+  if (built.failure) {
+    return [
+      `<figure class="example example--failed" data-language="${escape(built.language)}">`,
+      head(built, title),
+      `<p class="example__failure"><strong>This example did not build.</strong> ${escape(built.failure)}</p>`,
+      sourceOf(source),
+      "</figure>",
+    ].join("");
+  }
+
+  const previews = (built.previews ?? [])
+    .map(
+      (href, index) =>
+        `<a class="example__page" href="${escape(href)}" target="_blank" rel="noopener">` +
+        `<img src="${escape(href)}" alt="${escape(title || built.name)}, page ${index + 1}"` +
+        ` loading="lazy" decoding="async">` +
+        `<span class="example__page-no">${index + 1}</span></a>`,
+    )
+    .join("");
+
+  const body = previews
+    ? `<div class="example__pages">${previews}</div>${downloads(built)}`
+    : [
+        '<p class="example__notice">This example built. It has no preview image, because the machine ',
+        'that built this page had no LibreOffice to render one with. What follows is read back ',
+        'out of the document it produced.</p>',
+        outline(built),
+        downloads(built),
+      ].join("");
+
+  return [
+    `<figure class="example" data-language="${escape(built.language)}">`,
+    head(built, title),
+    sourceOf(source),
+    body,
+    "</figure>",
+  ].join("");
+}
+
+/**
+ * The document's own text, as read out of the built file.
+ *
+ * The fallback for a machine with no LibreOffice, and a better one than a page of downloads with
+ * nothing under them: this is read from the artifact rather than from the Markdown that produced
+ * it, so a converter that dropped something shows up here as something missing.
+ */
+function outline(built) {
+  const pages = built.contents ?? [];
+
+  if (!pages.length) {
+    return "";
+  }
+
+  return (
+    '<div class="example__outline">' +
+    pages
+      .map(
+        (page) =>
+          `<div class="example__outline-page"><h4>${escape(page.heading)}</h4><ul>` +
+          (page.lines ?? []).map((line) => `<li>${escape(line)}</li>`).join("") +
+          "</ul></div>",
+      )
+      .join("") +
+    "</div>"
+  );
+}
+
+function head(built, title) {
+  return (
+    '<figcaption class="example__head">' +
+    `<span class="example__badge">${built.language === "presentation" ? "PowerPoint" : "Word"}</span>` +
+    `<span class="example__name">${escape(title || built.name)}</span>` +
+    '<span class="example__made">built by the library this page documents</span>' +
+    "</figcaption>"
+  );
+}
+
+function sourceOf(source) {
+  return (
+    '<details class="example__source"><summary>The Markdown</summary>' +
+    `<pre class="code"><code>${escape(source)}</code></pre></details>`
+  );
+}
+
+function downloads(built) {
+  const links = [];
+
+  if (built.document) {
+    links.push(
+      download(
+        built.document,
+        built.document.split("/").pop(),
+        "The document this example built, editable in Word, LibreOffice or Google Docs",
+        "source",
+      ),
+    );
+  }
+
+  if (built.pdf) {
+    links.push(
+      download(built.pdf, "PDF", "The same document as a PDF, for reading without Office", "PDF"),
+    );
+  }
+
+  return links.length ? `<p class="example__downloads">${links.join("")}</p>` : "";
+}
+
+function download(href, label, about, suffix) {
+  return (
+    `<a class="example__download" href="${escape(href)}" download title="${escape(about)}">` +
+    `<span>${escape(label)}</span><abbr>${escape(suffix)}</abbr></a>`
+  );
+}
+
+/**
+ * The key a built example is filed under, and it has to be the same on both sides of the build.
+ *
+ * `tools/render-examples.php` computes it as the first sixteen hex digits of
+ * `hash('sha256', $block)`, where `$block` is the whole trimmed fenced block — opening fence, body
+ * and closing fence. Hashing the body alone would need the body recovered from the text Eleventy
+ * hands over, which is the whole block; a fence is the one thing the shortcode cannot strip
+ * without re-implementing the parser that produced it.
+ */
+function hashOf(block) {
+  return createHash("sha256").update(block, "utf8").digest("hex").slice(0, 16);
+}
+
+function readManifest() {
+  try {
+    return JSON.parse(readFileSync(join(here, "_data/examples.json"), "utf8"));
+  } catch {
+    return {};
+  }
+}
+
+/**
+ * Write each page's Markdown beside its HTML, and assemble the whole set into `llms-full.txt`.
+ *
+ * Both are written from the source file rather than from the rendered page, because the rendered
+ * page is HTML and neither of these is meant to be HTML. A link of type `text/markdown` in the
+ * head points at the mirrors, and they are the point of the site for a reader that is not a
+ * browser: the directive in front of it rather than a `<pre>` with HTML escaped inside it.
+ *
+ * Generated here rather than as an Eleventy template because a template only ever sees
+ * `templateContent`, which is the page *after* Markdown — a `llms-full.txt` full of `<h2>` and
+ * `<pre>` is not a Markdown file and not much use to anything reading it.
+ */
+async function writeMirrors({ results, dir }) {
+  // Read from the source rather than from `result.data`: a build result carries the input path and
+  // the URL, and this hook has to work for a template whose data Eleventy computed rather than
+  // declared — a page with `eleventyComputed` frontmatter has a `section` that never appears in
+  // the file on disk.
+  const pages = (results ?? [])
+    .filter((result) => result.inputPath?.endsWith(".md") && result.url)
+    .map((result) => ({
+      url: result.url,
+      ...frontmatter(readFileSync(result.inputPath, "utf8")),
+      source: readFileSync(result.inputPath, "utf8"),
+    }))
+    .filter((page) => page.section && page.url !== "/");
+
+  // Anything a template computed goes back on top of what the file declared.
+  for (const result of results ?? []) {
+    const page = pages.find((candidate) => candidate.url === result.url);
+
+    if (page && result.page?.data) {
+      Object.assign(page, frontmatterOf(result.page.data));
+    }
+  }
+
+  for (const { url, source } of pages) {
+    const directory = join(dir.output, url.replace(/^\//, ""));
+    const [, frontmatter = "", body = ""] =
+      source.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n?([\s\S]*)$/) ?? [];
+
+    await mkdir(directory, { recursive: true });
+    await writeFile(join(directory, "index.md"), `---\n${frontmatter}\n---\n\n${body.trim()}\n`);
+  }
+
+  // Reading order, which the build order is not: pages are grouped by section and then by the
+  // `order` each page declares, so `llms.txt` and this file describe the site in the same sequence.
+  pages.sort(
+    (a, b) =>
+      SECTIONS.findIndex(([title]) => title === a.section) -
+        SECTIONS.findIndex(([title]) => title === b.section) ||
+      a.order - b.order ||
+      a.url.localeCompare(b.url),
+  );
+
+  const whole = pages
+    .map(
+      ({ url, title, source }) =>
+        `---\n\n<!-- ${url} -->\n\n## ${title}\n\n${asMarkdown(source)}\n\nSource: ${url}\n`,
+    )
+    .join("");
+
+  await writeFile(
+    join(dir.output, "llms-full.txt"),
+    `# Markdown Office — complete documentation\n\nOne Markdown document becomes a Word document or a\nPowerPoint deck, in PHP, with no Office and no binaries.\n\n${whole}`,
+  );
+}
+
+/**
+ * The four keys the mirrors and the full-text file need, out of a page's frontmatter.
+ *
+ * Read from the file rather than from the build result because a build result does not carry the
+ * data with it, and the one thing a page is required to have is these four keys — a page missing
+ * one is a page with nowhere to put its title.
+ */
+function frontmatter(source) {
+  const block = source.match(/^---\r?\n([\s\S]*?)\r?\n---/)?.[1];
+
+  // A page with no frontmatter block at all is a page with no keys, and `parseYaml("")` is an
+  // error rather than an empty document — so the empty case is answered here rather than passed on.
+  return block === undefined || block.trim() === "" ? frontmatterOf({}) : frontmatterOf(parseYaml(block) ?? {});
+}
+
+/**
+ * YAML values arrive already typed, so `order: 3` is a number and `title: 3` is a string. The
+ * keys are read with a fallback rather than validated, because a mirror is not the place to fail
+ * a build — the page itself would already have failed on the same missing key.
+ */
+function frontmatterOf(data) {
+  return {
+    section: typeof data?.section === "string" ? data.section : "",
+    order: Number.isFinite(data?.order) ? data.order : 0,
+    title: typeof data?.title === "string" ? data.title : "",
+    summary: typeof data?.summary === "string" ? data.summary : "",
+  };
+}
+
+/**
+ * A page's body with its frontmatter off and its examples in the form a reader can paste.
+ *
+ * The `{% example %}` pair is the build's own machinery, and this file is not the build — so an
+ * example becomes the fence it was written as. That is the whole point of including them: a
+ * reader gets the document source, ready to use, rather than a reference to a picture of one.
+ */
+function asMarkdown(source) {
+  const [, , body = ""] =
+    source.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n?([\s\S]*)$/) ?? [];
+
+  return body
+    .replace(/\{%\s*example[^%]*%\}\n?/g, "")
+    .replace(/\n?\{%\s*endexample\s*%\}/g, "")
+    .trim();
+}
+
+/**
+ * The pages grouped for the sidebar, and `Elsewhere` for anything in a section the menu does not
+ * declare. Listing those rather than dropping them turns a naming mistake into a visible page
+ * instead of a missing one.
+ *
+ * Takes `collections.all` as piped in, not the collections object: the template writes
+ * `collections.all | sections`, so the argument is the array.
+ */
+function sectionGroups(entries) {
+  // The filter is handed `collections.all` itself, because that is what the template pipes in —
+  // `collections.all | sections` passes the array, not the object that holds it.
+  const pages = (entries ?? []).filter((entry) => entry.url !== "/" && entry.data?.section);
+
+  const known = SECTIONS.map(([title, note]) => ({
+    title,
+    note,
+    pages: pages.filter((entry) => entry.data.section === title),
+  })).filter((group) => group.pages.length > 0);
+
+  const elsewhere = pages.filter(
+    (entry) => !SECTIONS.some(([title]) => title === entry.data.section),
+  );
+
+  return elsewhere.length
+    ? [
+        ...known,
+        {
+          title: "Elsewhere",
+          note: "Pages in a section the menu does not declare.",
+          pages: elsewhere,
+        },
+      ]
+    : known;
+}
+
+/**
+ * The page before and the page after, across the pages that carry a section.
+ *
+ * Computed here rather than in the template because Nunjucks has no `where` filter, and a
+ * collection walked by hand in the layout is a loop that has to be right on every page. Out of
+ * range gives undefined rather than an error, and an undefined neighbour is simply not linked,
+ * which is what should happen at either end anyway.
+ */
+function pager(entries, url) {
+  const ordered = (entries ?? []).filter((entry) => entry.data?.section);
+  const index = ordered.findIndex((entry) => entry.url === url);
+
+  return {
+    before: index > 0 ? ordered[index - 1] : undefined,
+    after: index >= 0 && index + 1 < ordered.length ? ordered[index + 1] : undefined,
+  };
+}
+
+function escape(value) {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
