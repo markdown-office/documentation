@@ -23,10 +23,50 @@ convert(new MarkdownToWord('notes.md'), 'notes.docx');
 convert(new WordToMarkdown('notes.docx'), 'notes.md');
 ```
 
-## What does not survive
+## What survives
 
-These are the whole list. Each one is a property of the formats rather than a bug, and each one
-is silent unless you look for it.
+For **standard Markdown** — headings, emphasis, inline code, links, lists, block quotes and tables
+— it is close to lossless, and it is worth trying before you assume otherwise:
+
+```markdown
+# Title
+
+Some **bold** and `code`.
+
+- one
+- two
+
+| A | B |
+| - | - |
+| 1 | 2 |
+```
+
+comes back as the same document, with the two changes below.
+
+## Directives do not come back
+
+Checked, rather than assumed:
+
+| Written | Comes back as |
+| --- | --- |
+| `::toc{depth=2}` | `Press F9 to build the table of contents.` |
+| `:footnote[Source: the ledger.]` | `:footnote[Source: the ledger.]` |
+
+The first is **not** a directive and never was on the way back — the document really does contain
+that sentence, inside the table-of-contents field, waiting for Word to build it. The reader reads
+the field's content and finds a sentence.
+
+The second round trips only by accident: `:footnote[…]` does not currently produce a
+`footnotes.xml` at all, so what the reader finds is the source text that was always in the body.
+See [Word directives](/directives/word/).
+
+**Neither is a round trip you should build on.** A pipeline that edits documents in Word and reads
+them back should treat directives as one-way.
+
+## What else does not survive
+
+These are the rest of the list. Each one is a property of the formats rather than a bug, and each
+one is silent unless you look for it.
 
 ### A table's header row comes back bold
 
@@ -69,6 +109,13 @@ With `blockQuote: null` there is no style id for the reader to match against, so
 
 Every column comes back as one of exactly three markers: `:--`, `--:` or `:-:`. The alignment
 survives; the marker does not.
+
+## And PowerPoint has no second direction at all
+
+There is no `.pptx` back to Markdown: no reader class, no reverse entry point, and
+`PresentationRenderer` has two methods — `render()` and `overflows()`. A deck is a thing you
+present, and reading back what someone edited in PowerPoint is a much larger problem than the one
+this package solves.
 
 ## Reading a document without writing one
 

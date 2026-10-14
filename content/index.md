@@ -2,7 +2,7 @@
 layout: layouts/base.njk
 permalink: /
 title: Markdown, into the file you actually send
-summary: One Markdown document becomes a Word document or a PowerPoint deck. In PHP, with no Office and no binaries.
+summary: Markdown to Word and to PowerPoint, in PHP. Word converts back; PowerPoint does not.
 section: Home
 order: 0
 ---
@@ -12,11 +12,36 @@ order: 0
 
 # Markdown, into the file you actually send
 
-One document in, a finished `.docx` or `.pptx` out. Headings that are headings, tables that are
-tables, a table of contents Word can build. No Office installed, no headless browser, no export
-button — just a PHP library and a string.
+A finished `.docx` or `.pptx`, from a Markdown file, in PHP. No Office installed, no headless
+browser, no export button.
 
 </div>
+
+## What each one does
+
+|  | **Markdown Word** | **Markdown Presentation** |
+| --- | --- | --- |
+| **Markdown → document** | `.docx` `.odt` `.rtf` | `.pptx` |
+| **document → Markdown** | **yes**, for standard Markdown | **no** — one direction only |
+| **Markdown dialect** | CommonMark + GitHub Flavored | Slidev |
+| **Look and feel** | frontmatter + themes | frontmatter + themes |
+| **Special features** | directives | directives |
+| **What those are** | `::toc`, `:footnote` | `::click`, `:::click`, `::column`, `::note` |
+| **What it will not do** | a `:::toc` body, a one-line code block's language, a theme in a `.dotx` | a Slidev directive, `---` as a rule, an image over 16 megapixels |
+
+Two of those lines are worth reading twice.
+
+**Word converts both ways.** A `.docx` goes back to Markdown, and for standard Markdown it goes
+back well — headings, emphasis, code, lists and tables all survive. Directives are the exception
+and are written down rather than glossed over: a `::toc` comes back as the text
+*"Press F9 to build the table of contents"*, which is what the document actually said, and a
+`:footnote[…]` comes back as itself because it was never a footnote in the first place. See
+[Round trips](/guides/round-trip/).
+
+**PowerPoint is one direction.** There is no reader, no `.pptx` back to Markdown, and no plan to
+add one: a deck is a thing you present, and the interesting inverse problem — what someone edited
+in PowerPoint should become Markdown — is a different and much larger problem than the one this
+package solves.
 
 <div class="hero__rule">The suite</div>
 
@@ -25,8 +50,9 @@ button — just a PHP library and a string.
 <li>
 <a class="card" href="/directives/word/">
 <h3>Markdown Word</h3>
-<p>Markdown to <code>.docx</code>, and <code>.docx</code> back to Markdown. Tables, footnotes,
-headers and footers, templates, styles, and a table of contents that is a real Word field.</p>
+<p>Markdown to <code>.docx</code>, <code>.odt</code> and <code>.rtf</code> — and back to
+Markdown. Templates, styles, headers and footers, and a table of contents that is a real Word
+field.</p>
 <code>markdown-office/markdown-word</code>
 </a>
 </li>
@@ -43,8 +69,8 @@ click builds and speaker notes — and a refusal for anything it will not draw.<
 <li>
 <a class="card" href="/directives/syntax/">
 <h3>CommonMark Generic Directives</h3>
-<p>The syntax both halves read: <code>:name</code>, <code>::name</code>,
-<code>:::name</code>. One parser extension for your own directives, if you want one.</p>
+<p>The syntax both read: <code>:name</code>, <code>::name</code>, <code>:::name</code>. One
+parser extension, for your own directives if you want one.</p>
 <code>markdown-office/commonmark-generic-directives</code>
 </a>
 </li>
@@ -55,42 +81,23 @@ click builds and speaker notes — and a refusal for anything it will not draw.<
 
 <ul class="actions">
 <li><a class="primary" href="/getting-started/">Get started</a></li>
-<li><a class="ghost" href="/directives/">How directives work</a></li>
+<li><a class="ghost" href="/directives/">The directives</a></li>
 </ul>
 
-## What it is not
+## Every example here is a real document
 
-Markdown is a text format and an office document is a tree of drawing instructions. There is no
-mapping between them that does not involve a decision about what a thing _is_, and a library
-that hides those decisions is a library that produces documents nobody meant to write.
+Each one is converted by the library it documents while this page is built, and can be
+downloaded and opened. If an example stops working, the build stops — which is how this page came
+to say that `:footnote[…]` produces no footnote.
 
-So these libraries are loud about them.
+## Read it over HTTP
 
-- A deck names a directive nobody reads, the build fails and the message lists the directives
-  that would have worked. It does not draw a slide with the wrong thing on it.
-- An image is over the pixel ceiling, it is refused before a byte of it is decoded. A file of
-  152 bytes that declares a 16000-square picture does not get to take a gigabyte to find out.
-- A round trip cannot preserve everything, and the pages here say exactly what it cannot.
-
-Every example on this site is not a screenshot of an example. It is the output of the library,
-produced while this page was built — and downloadable, so you can open it in Word rather than
-trust the page. If an example stops working, the build stops.
-
-## Written to be read by a machine, too
-
-This documentation is built from Markdown and served as static files, with three deliberate
-extras for anything reading it rather than looking at it:
-
-- **[`llms.txt`](/llms.txt)** — the whole index, one line per page.
-- **[`llms-full.txt`](/llms-full.txt)** — every page in one file.
-- **[`pages.json`](/pages.json)** — the index as data, with the URL of each page's Markdown.
-
-Every page is also available as plain Markdown at its own URL, so `/getting-started/` is
-`/getting-started/index.md`. Nothing here needs JavaScript, and nothing needs a network round
-trip to be read.
+Nothing here needs a browser or a round trip. The same three files are at
+[`/llms.txt`](/llms.txt), [`/llms-full.txt`](/llms-full.txt) and [`/pages.json`](/pages.json),
+and every page is available as Markdown at its own URL.
 
 ## Requirements
 
-PHP 8.2 or newer, and `ext-dom`, `ext-gd`, `ext-zip` — plus `ext-mbstring` for the Word half.
-`ext-imagick` is optional and buys you SVG; without it an SVG is refused by name rather than
-quietly rasterised badly.
+PHP 8.2 or newer, with `ext-dom`, `ext-gd` and `ext-zip` — plus `ext-mbstring` for the Word half.
+`ext-imagick` is optional and buys SVG; without it an SVG is refused by name rather than quietly
+rasterised badly.

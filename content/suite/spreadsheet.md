@@ -25,6 +25,14 @@ and that choice would then be the only way to use them.
 
 ## The three
 
+| Package | Markdown in | Document out | Back to Markdown |
+| --- | --- | --- | --- |
+| `markdown-office/markdown-word` | CommonMark + GFM | `.docx` `.odt` `.rtf` | **yes**, for standard Markdown |
+| `markdown-presentation/markdown-presentation` | Slidev | `.pptx` | **no** |
+| `markdown-office/commonmark-generic-directives` | — | — | — a parser extension, on its own |
+
+## What each one is
+
 | Package | What it is |
 | --- | --- |
 | [`markdown-office/markdown-word`](/directives/word/) | Markdown to `.docx`, `.odt` and `.rtf`, and `.docx` back to Markdown |
