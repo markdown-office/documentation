@@ -193,6 +193,9 @@ final class Runner
         /** @var array{document?: ?string, pdf?: ?string, previews?: list<string>, failure?: ?string} $read */
         $read = (array) \json_decode((string) \file_get_contents($cache . '/manifest.json'), true);
 
+        // Every field the manifest records, in the constructor's order. Adding one and not
+        // passing it here is silent: the first build is right and every build after it drops
+        // the field, which is how an example loses its document outline without anything failing.
         return new Example(
             $language,
             (string) \file_get_contents($cache . '/example.md'),
@@ -201,6 +204,7 @@ final class Runner
             $read['pdf'] ?? null,
             $read['previews'] ?? [],
             $read['failure'] ?? null,
+            $read['contents'] ?? [],
         );
     }
 

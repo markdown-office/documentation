@@ -810,37 +810,51 @@ img {
 
 /* ---------- highlighted code ---------- */
 
-/* Shiki writes its own colours inline and sets a background on the <pre>, which would override
-   the panel background the rest of the page uses. Both are dropped here so a highlighted block
-   and a plain one are the same object: same padding, same border, same background. */
+/* Shiki writes its own colours inline and sets a background on the <pre>, which would otherwise
+   override the panel the rest of the page uses. Both are dropped here so a highlighted block and
+   a plain one are the same object: same padding, same border, same background. */
 .shiki {
-  margin: 1.25rem 0;
+  padding: 0;
+  background: var(--panel) !important;
   border: 1px solid var(--line);
   border-radius: 10px;
-  background: var(--panel) !important;
   overflow-x: auto;
+  margin: 1.25rem 0;
   tab-size: 2;
 }
 
+/* `normal` on the block and `pre` on the line, and the reason is measured rather than argued.
+
+   A `<pre>` is `white-space: pre`, and Shiki separates its `.line` spans with newlines in the
+   markup. So each line was broken twice: once by the newline and once by `.line` being a block.
+   That put a blank line between every pair of lines and made a three-line block 170px tall where
+   94px was right — 42px of pitch where 20.8px was intended, and no amount of line-height tuning
+   would have found it.
+
+   Collapsing the whitespace between the spans and preserving it inside each one keeps the leading
+   indentation of a line, which is the thing `pre` was there for. */
 .shiki code {
+  display: block;
+  white-space: normal;
   font: 13px/1.6 var(--mono);
   background: none;
-  display: block;
+  border: 0;
   padding: 1rem 1.15rem;
   color: inherit;
+  tab-size: 2;
 }
 
+/* A long line is worth seeing in full rather than wrapped: the block is meant to be copyable,
+   and a wrapped fence looks like something else. `min-height` keeps a blank line the same height
+   as a written one, which is what `white-space: pre` would have done on its own. */
 .shiki .line {
   display: block;
-  min-height: 1em;
-}
-
-/* A long line in a sample is worth seeing in full rather than wrapped: the whole point of the
-   block is that it is copyable, and a wrapped fence looks like something else. */
-.shiki code {
   white-space: pre;
+  min-height: 1.6em;
 }
 
+/* Plain code blocks — a fence that is not an example — keep the same metrics so the two do not
+   look like different things. */
 pre:not(.shiki) {
   font: 13px/1.6 var(--mono);
   background: var(--panel);
@@ -849,4 +863,5 @@ pre:not(.shiki) {
   padding: 1rem 1.15rem;
   overflow-x: auto;
   margin: 1.25rem 0;
+  tab-size: 2;
 }
