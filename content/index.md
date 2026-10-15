@@ -62,7 +62,7 @@ field.</p>
 <h3>Markdown Presentation</h3>
 <p>Markdown to <code>.pptx</code>, with a splitter ported from Slidev's. Layouts, themes,
 columns, click builds and speaker notes — and a refusal for anything it will not draw.</p>
-<code>markdown-presentation/markdown-presentation</code>
+<code>markdown-office/markdown-presentation</code>
 </a>
 </li>
 
@@ -75,6 +75,16 @@ parser extension, for your own directives if you want one.</p>
 </a>
 </li>
 
+<li>
+<a class="card" href="/guides/command-line/">
+<h3>mdoffice</h3>
+<p>The command line for both of them: <code>mdoffice word</code> and <code>mdoffice
+slides</code>. Requires both converters and calls them — a program, not a facade, so neither
+package depends on it.</p>
+<code>markdown-office/mdoffice</code>
+</a>
+</li>
+
 </ul>
 
 <div class="hero__rule">Start here</div>
@@ -82,6 +92,7 @@ parser extension, for your own directives if you want one.</p>
 <ul class="actions">
 <li><a class="primary" href="/word/">Markdown Word</a></li>
 <li><a class="primary" href="/presentation/">Markdown Presentation</a></li>
+<li><a class="ghost" href="/guides/command-line/">The command line</a></li>
 <li><a class="ghost" href="/directives/syntax/">The directive syntax</a></li>
 </ul>
 
@@ -102,3 +113,12 @@ and every page is available as Markdown at its own URL.
 PHP 8.2 or newer, with `ext-dom`, `ext-gd` and `ext-zip` — plus `ext-mbstring` for the Word half.
 `ext-imagick` is optional and buys SVG; without it an SVG is refused by name rather than quietly
 rasterised badly.
+
+Two extensions are asked for by the dependency rather than by this code, and only matter when the
+extractions are compiled from source: `ext-zip`, which every normal PHP install bundles, and
+`ext-xmlwriter`, which PHPWord uses to write a document and which `ext-xml` does **not** provide.
+A from-source build that omits either produces an archive that reports its version and then
+cannot write anything.
+
+The command line needs none of this if you take a release instead: each executable carries its own
+PHP. See [the command line](/guides/command-line/).

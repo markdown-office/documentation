@@ -7,10 +7,12 @@ section: Markdown Presentation
 order: 0
 ---
 
-The dialect and the library. There is no command-line tool for this half yet.
+The dialect and the library. The command line for both halves is
+[`mdoffice`](https://github.com/markdown-office/mdoffice); this page is about what you get
+without it.
 
 ```bash
-composer require markdown-presentation/markdown-presentation
+composer require markdown-office/markdown-presentation
 ```
 
 PHP 8.2 or newer, with `ext-dom`, `ext-gd` and `ext-zip`. `ext-imagick` is optional and buys SVG.

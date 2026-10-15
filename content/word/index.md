@@ -222,15 +222,17 @@ More, including what a `:::toc` container does: [Word directives](/directives/wo
 
 ## 2. Command line
 
-`mdword` is the whole library at a terminal. Composer puts it at `vendor/bin/mdword`.
+The command line for this half is [`mdoffice`](https://github.com/markdown-office/mdoffice), one
+program over both converters. It is not part of this package: this is a library, and
+`vendor/bin/mdword` no longer exists. What it does is what this library does.
+
+```bash
+mdoffice word README.md          # writes README.docx
+mdoffice word README.docx        # writes README.md
+```
 
 It decides which way the data has to go **from the content, not the name**: a Word document is a
 zip and Markdown is text, and the four bytes that say which is which are part of the format.
-
-```bash
-mdword README.md          # writes README.docx
-mdword README.docx        # writes README.md
-```
 
 | Command | Does |
 | --- | --- |
@@ -259,18 +261,14 @@ mdword README.docx        # writes README.md
 A filter, not a command that needs a filename:
 
 ```bash
-cat notes.md | mdword --to docx - -o - | pbcopy
+cat notes.md | mdoffice word --to docx - -o - | pbcopy
 ```
 
 Exit `0` on success, `1` for a bad input or a configuration problem, printed as the sentence alone
-— no class name, no line from this repository — because it is the caller's mistake to fix.
+— no class name, no line from any repository — because it is the caller's mistake to fix.
 
-**A trap:** the built-in `--help` shows an example using `--region body --define
-customer=Northwind`, and **neither is an option of any command**. Both are rejected at runtime.
-
-More, including the phar and the error messages: [The command line](/guides/command-line/).
-
----
+More, including the other half, the downloads and the error messages:
+[The command line](/guides/command-line/).
 
 ## 3. As a library
 

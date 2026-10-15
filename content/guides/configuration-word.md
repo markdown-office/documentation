@@ -35,7 +35,7 @@ $parser = new CommonMarkParser([
 (new MarkdownToWord($markdown, parser: $parser))->save('out.docx');
 ```
 
-The command line always has it — `mdword` adds `FrontMatterExtension` on top of the default
+The command line always has it — `mdoffice word` adds `FrontMatterExtension` on top of the default
 flavour — which is why this catches people writing PHP and not people using the binary.
 
 ## Top-level keys

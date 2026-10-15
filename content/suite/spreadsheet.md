@@ -2,12 +2,13 @@
 layout: layouts/base.njk
 permalink: /suite/spreadsheet/
 title: The suite
-summary: Three packages, no facade, and a fourth on the way.
+summary: Three packages with no facade between them, one command line over the two
+  converters, and a fourth package on the way.
 section: The suite
 order: 0
 ---
 
-## There is no umbrella package
+## There is no umbrella library, and one umbrella tool
 
 The three packages are independent. There is no `markdown-office/office` that depends on all of
 them, no shared base class, and no facade. **A consumer installs what they need** and calls the
@@ -15,7 +16,7 @@ one class it wants.
 
 ```bash
 composer require markdown-office/markdown-word
-composer require markdown-presentation/markdown-presentation
+composer require markdown-office/markdown-presentation
 composer require markdown-office/commonmark-generic-directives   # both of the above already have it
 ```
 
@@ -23,12 +24,27 @@ That is a deliberate choice rather than an unfinished one. A facade would have t
 configuration story for two packages that disagree about what an unrecognised directive should do,
 and that choice would then be the only way to use them.
 
+What there *is* is [`markdown-office/mdoffice`](https://github.com/markdown-office/mdoffice): one
+command line for both converters, requiring both packages and calling them rather than
+reimplementing either.
+
+**A shipped program is not a library.** It has no public API for converting anything — a document
+is made by running it, not by calling a class — so nothing about it constrains how the packages
+below are used on their own, and nothing there is a second way to reach `MarkdownToWord`. A facade
+would have been exactly that, and would have carried the configuration choice above. This does
+not.
+
+```bash
+mdoffice word notes.md      # → notes.docx
+mdoffice slides deck.md     # → deck.pptx
+```
+
 ## The three
 
 | Package | Markdown in | Document out | Back to Markdown |
 | --- | --- | --- | --- |
 | `markdown-office/markdown-word` | CommonMark + GFM | `.docx` `.odt` `.rtf` | **yes**, for standard Markdown |
-| `markdown-presentation/markdown-presentation` | Slidev-inspired | `.pptx` | **no** |
+| `markdown-office/markdown-presentation` | Slidev-inspired | `.pptx` | **no** |
 | `markdown-office/commonmark-generic-directives` | — | — | — a parser extension, on its own |
 
 ## What each one is
@@ -36,7 +52,7 @@ and that choice would then be the only way to use them.
 | Package | What it is |
 | --- | --- |
 | [`markdown-office/markdown-word`](/directives/word/) | Markdown to `.docx`, `.odt` and `.rtf`, and `.docx` back to Markdown |
-| [`markdown-presentation/markdown-presentation`](/directives/presentation/) | Markdown to `.pptx`, with a Slidev-compatible splitter |
+| [`markdown-office/markdown-presentation`](/directives/presentation/) | Markdown to `.pptx`, with a Slidev-compatible splitter |
 | [`markdown-office/commonmark-generic-directives`](/directives/syntax/) | the directive syntax, for your own parser if you want one |
 
 Both converters require the directives package at the same constraint, `^0.2.0`, and both use it
