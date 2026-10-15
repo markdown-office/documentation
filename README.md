@@ -20,6 +20,14 @@ npm run serve        # the same, with a watcher
 npm run build:strict # ...and exit non-zero if an example does not build
 ```
 
+```bash
+PORT=9000 npm run serve   # the watcher, on the port you name
+```
+
+The watcher defaults to **8123**. Eleventy's own default is 8080, which is a popular port and on
+the machine this was written on was already something else's — the failure that causes is an
+"address in use", and nothing about it points at the real problem. `PORT` overrides it.
+
 ## Why the examples are not screenshots
 
 A documented example is a claim about what a library does. A claim written by hand is correct only

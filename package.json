@@ -9,7 +9,7 @@
     "examples": "php tools/render-examples.php",
     "build": "npm run examples && eleventy",
     "build:strict": "php tools/render-examples.php --strict && eleventy",
-    "serve": "npm run examples && eleventy --serve",
+    "serve": "npm run examples && eleventy --serve --port=${PORT:-8123}",
     "clean": "rm -rf _site _examples _data/examples.json"
   },
   "devDependencies": {
