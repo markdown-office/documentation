@@ -105,7 +105,7 @@ to say that `:footnote[…]` produces no footnote.
 ## Read it over HTTP
 
 Nothing here needs a browser or a round trip. The same three files are at
-[`/llms.txt`](/llms.txt), [`/llms-full.txt`](/llms-full.txt) and [`/pages.json`](/pages.json),
+[`llms.txt`](/llms.txt), [`llms-full.txt`](/llms-full.txt) and [`pages.json`](/pages.json),
 and every page is available as Markdown at its own URL.
 
 ## Requirements

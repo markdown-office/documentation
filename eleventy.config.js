@@ -18,6 +18,25 @@ const parseYaml = yaml.parse ?? yaml.load;
 const here = dirname(fileURLToPath(import.meta.url));
 
 /**
+ * The address the site is served from, without a trailing slash.
+ *
+ * The path is part of the address and not a setting of its own, because the two cannot disagree:
+ * a site served at `https://host/docs/` is canonical at `https://host/docs/…` and nowhere else.
+ * One variable therefore carries both — the address and the path it is mounted under — and
+ * moving the site is a matter of setting it once.
+ */
+const canonical = (
+  process.env.MARKDOWN_OFFICE_CANONICAL ?? "https://markdown-office.github.io/documentation"
+).replace(/\/+$/, "");
+
+/**
+ * The path the site is mounted under, as Eleventy wants it: a leading and a trailing slash.
+ *
+ * A site at the root of a host has no prefix, and Eleventy's own default of `/` is right for it.
+ */
+const pathPrefix = mountPath(canonical);
+
+/**
  * The pages of the site, grouped for the sidebar.
  *
  * A hand-written menu is a menu that rots, and it rots silently: the page it names is deleted,
@@ -66,12 +85,7 @@ export default function (eleventyConfig) {
 
   eleventyConfig.addGlobalData("suite", () => ({
     name: "Markdown Office",
-    canonical: (
-      (process.env.MARKDOWN_OFFICE_CANONICAL ?? "https://markdown-office.dev").replace(
-        /\/+$/,
-        "",
-      ) + "/"
-    ),
+    canonical,
     sections: SECTIONS.map(([title, note]) => ({ title, note })),
   }));
 
@@ -95,10 +109,34 @@ export default function (eleventyConfig) {
       includes: "../_includes",
       data: "../_data",
     },
+    // The prefix every internal link and permalink is served under. Eleventy puts it on the
+    // links in the built HTML; the canonical addresses above carry it already.
+    pathPrefix,
     markdownTemplateEngine: "njk",
     htmlTemplateEngine: "njk",
     templateFormats: ["md", "njk"],
   };
+}
+
+/**
+ * The path an address is served under, as a path: `/documentation/`, or `/` for a host's root.
+ *
+ * Throws rather than guessing, because a canonical address that is not an address produces a
+ * site whose links point nowhere and whose error says nothing about which setting is wrong.
+ */
+function mountPath(address) {
+  let path;
+
+  try {
+    path = new URL(address).pathname;
+  } catch {
+    throw new Error(
+      `MARKDOWN_OFFICE_CANONICAL is "${address}", which is not an address. `
+        + "It has to be the URL the site is served from, path included.",
+    );
+  }
+
+  return path.replace(/\/?$/, "/");
 }
 
 /**
@@ -367,11 +405,11 @@ async function writeMirrors({ results, dir }) {
   // the file on disk.
   const pages = (results ?? [])
     .filter((result) => result.inputPath?.endsWith(".md") && result.url)
-    .map((result) => ({
-      url: result.url,
-      ...frontmatter(readFileSync(result.inputPath, "utf8")),
-      source: readFileSync(result.inputPath, "utf8"),
-    }))
+    .map((result) => {
+      const source = withMountPath(readFileSync(result.inputPath, "utf8"));
+
+      return { url: result.url, ...frontmatter(source), source };
+    })
     .filter((page) => page.section);
 
   // Anything a template computed goes back on top of what the file declared.
@@ -405,7 +443,7 @@ async function writeMirrors({ results, dir }) {
   const whole = pages
     .map(
       ({ url, title, source }) =>
-        `---\n\n<!-- ${url} -->\n\n## ${title}\n\n${asMarkdown(source)}\n\nSource: ${url}\n`,
+        `---\n\n<!-- ${canonical}${url} -->\n\n## ${title}\n\n${asMarkdown(source)}\n\nSource: ${canonical}${url}\n`,
     )
     .join("");
 
@@ -428,6 +466,32 @@ async function writeMirrors({ results, dir }) {
     join(dir.output, "llms-full.txt"),
     `# Markdown Office — complete documentation\n\nOne Markdown document becomes a Word document or a\nPowerPoint deck, in PHP, with no Office and no binaries.\n\n${whole}`,
   );
+}
+
+/**
+ * The links in a page's Markdown, carrying the path the site is served under.
+ *
+ * Eleventy rewrites the links in the finished HTML; the Markdown mirrors are written here, and
+ * a link to `/guides/round-trip/` in one of them points at the root of the host, which is not
+ * where the site is.
+ *
+ * The examples are left as they are: they are what a reader writes in their own document, where
+ * the path of this site means nothing.
+ */
+function withMountPath(source) {
+  const prefix = pathPrefix.replace(/\/+$/, "");
+
+  return source
+    .split(/(\{%\s*example[\s\S]*?\{%\s*endexample\s*%\})/)
+    .map((part) =>
+      part.startsWith("{%")
+        ? part
+        : part
+            .replace(/\]\(\//g, `](${prefix}/`)
+            .replace(/\]:\s*\//g, `]: ${prefix}/`)
+            .replace(/href="\//g, `href="${prefix}/`),
+    )
+    .join("");
 }
 
 /**

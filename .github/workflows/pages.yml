@@ -1,0 +1,122 @@
+name: pages
+
+on:
+  push:
+    branches: [main]
+  # The site is built on every pull request as well, so that a pull request which breaks the
+  # build says so before it is merged rather than after the site is published.
+  pull_request:
+  workflow_dispatch:
+
+# Read-only by default. The job that publishes widens this to what Pages needs.
+permissions:
+  contents: read
+
+# One run per branch, and none of them cancels another: a deployment that is interrupted
+# half way leaves a site that is neither the old one nor the new one.
+concurrency:
+  group: pages-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: build the site
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    env:
+      # The address the site is served from, path included. The path in it is the path the
+      # site is mounted under, so this one setting decides both the canonical addresses and
+      # the links in the built pages.
+      MARKDOWN_OFFICE_CANONICAL: https://markdown-office.github.io/documentation
+    steps:
+      # This repository with the three libraries beside it, because the manifest's `path`
+      # entries resolve by directory and `../markdown-word` means nothing in any other
+      # arrangement. The checkout of this repository therefore goes into a directory of its
+      # own, and the libraries into the ones beside it.
+      - name: Check out the documentation
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          path: documentation
+
+      - name: Check out markdown-word
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          repository: markdown-office/markdown-word
+          ref: main
+          path: markdown-word
+
+      - name: Check out markdown-presentation
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          repository: markdown-office/markdown-presentation
+          ref: main
+          path: markdown-presentation
+
+      - name: Check out commonmark-generic-directives
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          repository: markdown-office/commonmark-generic-directives
+          ref: main
+          path: commonmark-generic-directives
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # v2
+        with:
+          php-version: '8.4'
+          extensions: dom, gd, mbstring, zip
+          tools: composer:v2
+
+      - name: Set up Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: documentation/package-lock.json
+
+      - name: Install the libraries
+        working-directory: documentation
+        run: composer install --no-interaction --no-progress
+
+      - name: Install Eleventy
+        working-directory: documentation
+        run: npm ci
+
+      - name: Build the site
+        working-directory: documentation
+        run: npm run build
+
+      # A site whose links 404 is worse than no site, and nothing else says so: the build
+      # succeeds, the pages are there, and the reader is the one who finds out.
+      - name: The site's own links
+        working-directory: documentation
+        run: php tools/check-site-links.php
+
+      - name: Upload the site
+        uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3
+        with:
+          path: documentation/_site
+
+  deploy:
+    name: publish the site
+    needs: build
+    # Only from the branch the site is published from. A pull request builds the site and
+    # proves it is sound; it does not publish it.
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      # The Pages site has to exist and has to be built by this workflow. The action cannot
+      # create it with the workflow's own token — that needs one of an administrator's — so
+      # it is enabled on the repository, and this is what says so when it is not.
+      - name: Check the Pages site
+        uses: actions/configure-pages@983d7736d9b0ae728b81ab479565c72886d7745b # v5
+
+      - name: Publish
+        id: deployment
+        uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4

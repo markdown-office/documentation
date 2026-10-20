@@ -10,7 +10,7 @@ eleventyExcludeFromCollections: true
 
 This documentation is built from Markdown, and every example in it was produced by the library
 it documents at the moment the site was built. The same pages are available as Markdown one page
-at a time, and there is a JSON index at /pages.json.
+at a time, and there is a JSON index at {{ suite.canonical }}/pages.json.
 
 {% for group in (collections.all | sections) %}
 ## {{ group.title }}
