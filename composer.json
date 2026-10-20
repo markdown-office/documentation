@@ -18,7 +18,7 @@
         "league/commonmark": "^2.10",
         "markdown-office/commonmark-generic-directives": "0.2.0",
         "markdown-office/markdown-word": "dev-main",
-        "markdown-presentation/markdown-presentation": "dev-main"
+        "markdown-office/markdown-presentation": "dev-main"
     },
     "repositories": [
         {
@@ -47,7 +47,7 @@
             "options": {
                 "symlink": true,
                 "versions": {
-                    "markdown-presentation/markdown-presentation": "dev-main"
+                    "markdown-office/markdown-presentation": "dev-main"
                 }
             }
         }
@@ -78,7 +78,8 @@
         "check": [
             "@php build --strict",
             "pest"
-        ]
+        ],
+        "check:links": "@php tools/check-readme-links.php ../markdown-word ../markdown-presentation ../mdoffice"
     },
     "minimum-stability": "dev",
     "prefer-stable": true
