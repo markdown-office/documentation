@@ -11,8 +11,8 @@ order: 0
 ## There is no umbrella library, and one umbrella tool
 
 The three packages are independent. There is no `markdown-office/office` that depends on all of
-them, no shared base class, and no facade. **A consumer installs what they need** and calls the
-one class it wants.
+them, no shared base class, and no facade: no umbrella **library**. **A consumer installs what
+they need** and calls the one class it wants.
 
 ```bash
 composer require markdown-office/markdown-word
@@ -25,8 +25,8 @@ configuration story for two packages that disagree about what an unrecognised di
 and that choice would then be the only way to use them.
 
 What there *is* is [`markdown-office/mdoffice`](https://github.com/markdown-office/mdoffice): one
-command line for both converters, requiring both packages and calling them rather than
-reimplementing either.
+umbrella **tool**, a single command line over both converters, requiring both packages and calling
+them rather than reimplementing either.
 
 **A shipped program is not a library.** It has no public API for converting anything — a document
 is made by running it, not by calling a class — so nothing about it constrains how the packages
@@ -38,6 +38,8 @@ not.
 mdoffice word notes.md      # → notes.docx
 mdoffice slides deck.md     # → deck.pptx
 ```
+
+The command line is documented in full under [The command line](/guides/command-line/).
 
 ## The three
 

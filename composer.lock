@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "65a80957358753d876f41e906c0b6987",
+    "content-hash": "73bca613558e398b45e7ca6f57160334",
     "packages": [
         {
             "name": "composer/pcre",
@@ -537,7 +537,7 @@
             "dist": {
                 "type": "path",
                 "url": "../commonmark-generic-directives",
-                "reference": "7e192f1327e829db9bac0ae93ac2032821fe982d"
+                "reference": "3955efcbc2a8d6bb02755831169209e163e88ff2"
             },
             "require": {
                 "league/commonmark": "^2.10",
@@ -612,122 +612,12 @@
             }
         },
         {
-            "name": "markdown-office/markdown-word",
-            "version": "dev-main",
-            "dist": {
-                "type": "path",
-                "url": "../markdown-word",
-                "reference": "7dab9e1efe9992a11494ab54e1bcce09a36dbf3c"
-            },
-            "require": {
-                "ext-dom": "*",
-                "ext-gd": "*",
-                "ext-mbstring": "*",
-                "ext-zip": "*",
-                "league/commonmark": "^2.10",
-                "markdown-office/commonmark-generic-directives": "^0.2.0",
-                "php": "^8.2",
-                "phpoffice/phpword": "^1.4",
-                "symfony/yaml": "^7.4 || ^8.1"
-            },
-            "require-dev": {
-                "pestphp/pest": "^5.0"
-            },
-            "suggest": {
-                "ext-imagick": "Embeds SVG as a vector. Word holds an SVG only beside a raster of it, so something has to draw the raster; without this an SVG raises instead of going in."
-            },
-            "bin": [
-                "bin/mdword"
-            ],
-            "type": "library",
-            "autoload": {
-                "psr-4": {
-                    "MarkdownWord\\": "src/"
-                }
-            },
-            "autoload-dev": {
-                "psr-4": {
-                    "MarkdownWord\\Tests\\": "tests/"
-                }
-            },
-            "scripts": {
-                "test": [
-                    "pest"
-                ],
-                "test:unit": [
-                    "pest --testsuite=unit"
-                ],
-                "test:spec": [
-                    "pest --testsuite=conformance"
-                ],
-                "test:roundtrip": [
-                    "pest --testsuite=roundtrip"
-                ],
-                "test:readme": [
-                    "pest --testsuite=readme"
-                ],
-                "test:coverage": [
-                    "pest --coverage --min=91 --coverage-clover=build/coverage/clover.xml --coverage-html=build/coverage/html"
-                ],
-                "cli": [
-                    "@php bin/mdword --version"
-                ],
-                "check": [
-                    "@composer validate --strict",
-                    "@check:audit",
-                    "@check:cli",
-                    "@php smoke.php",
-                    "@php stress.php",
-                    "@php vendor/bin/pest"
-                ],
-                "check:audit": [
-                    "@composer audit --no-interaction"
-                ],
-                "check:cli": [
-                    "@cli"
-                ],
-                "check:coverage": [
-                    "@test:coverage"
-                ],
-                "build:phar": [
-                    "@php -d phar.readonly=0 tools/build-phar.php"
-                ]
-            },
-            "license": [
-                "MIT"
-            ],
-            "authors": [
-                {
-                    "name": "Fabian Graßl",
-                    "email": "mail@fabiangrassl.de"
-                }
-            ],
-            "description": "Pure PHP Markdown to Word (DOCX) generator and back, built on PHPWord. Full CommonMark and GitHub-Flavored Markdown support, configurable styling, Word template rendering, and a command line utility.",
-            "keywords": [
-                "cli",
-                "commonmark",
-                "converter",
-                "docx",
-                "gfm",
-                "markdown",
-                "pandoc",
-                "phar",
-                "phpword",
-                "template",
-                "word"
-            ],
-            "transport-options": {
-                "symlink": true,
-                "relative": true
-            }
-        },
-        {
-            "name": "markdown-presentation/markdown-presentation",
+            "name": "markdown-office/markdown-presentation",
             "version": "dev-main",
             "dist": {
                 "type": "path",
                 "url": "../markdown-presentation",
-                "reference": "f254595363665bb79df0f338678f015d1dfb9a56"
+                "reference": "71c361504fe7ad2b7c80803a9d1636cf11cb394e"
             },
             "require": {
                 "ext-dom": "*",
@@ -799,6 +689,101 @@
                 "slidev",
                 "theme",
                 "yaml"
+            ],
+            "transport-options": {
+                "symlink": true,
+                "relative": true
+            }
+        },
+        {
+            "name": "markdown-office/markdown-word",
+            "version": "dev-main",
+            "dist": {
+                "type": "path",
+                "url": "../markdown-word",
+                "reference": "00558bd0146cf48b48c0d8f7a380bc65517a4d50"
+            },
+            "require": {
+                "ext-dom": "*",
+                "ext-gd": "*",
+                "ext-mbstring": "*",
+                "ext-zip": "*",
+                "league/commonmark": "^2.10",
+                "markdown-office/commonmark-generic-directives": "^0.2.0",
+                "php": "^8.2",
+                "phpoffice/phpword": "^1.4",
+                "symfony/yaml": "^7.4 || ^8.1"
+            },
+            "require-dev": {
+                "pestphp/pest": "^5.0"
+            },
+            "suggest": {
+                "ext-imagick": "Embeds SVG as a vector. Word holds an SVG only beside a raster of it, so something has to draw the raster; without this an SVG raises instead of going in."
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "MarkdownWord\\": "src/"
+                }
+            },
+            "autoload-dev": {
+                "psr-4": {
+                    "MarkdownWord\\Tests\\": "tests/"
+                }
+            },
+            "scripts": {
+                "test": [
+                    "pest"
+                ],
+                "test:unit": [
+                    "pest --testsuite=unit"
+                ],
+                "test:spec": [
+                    "pest --testsuite=conformance"
+                ],
+                "test:roundtrip": [
+                    "pest --testsuite=roundtrip"
+                ],
+                "test:readme": [
+                    "pest --testsuite=readme"
+                ],
+                "test:coverage": [
+                    "pest --coverage --min=91 --coverage-clover=build/coverage/clover.xml --coverage-html=build/coverage/html"
+                ],
+                "check": [
+                    "@composer validate --strict",
+                    "@check:audit",
+                    "@php smoke.php",
+                    "@php stress.php",
+                    "@php vendor/bin/pest"
+                ],
+                "check:audit": [
+                    "@composer audit --no-interaction"
+                ],
+                "check:coverage": [
+                    "@test:coverage"
+                ]
+            },
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Fabian Graßl",
+                    "email": "mail@fabiangrassl.de"
+                }
+            ],
+            "description": "Pure PHP Markdown to Word (DOCX) generator and back, built on PHPWord. Full CommonMark and GitHub-Flavored Markdown support, configurable styling, Word template rendering, and a table of contents, footnotes and a document's own header and footer.",
+            "keywords": [
+                "commonmark",
+                "converter",
+                "docx",
+                "gfm",
+                "markdown",
+                "pandoc",
+                "phpword",
+                "template",
+                "word"
             ],
             "transport-options": {
                 "symlink": true,
@@ -5861,8 +5846,8 @@
     "aliases": [],
     "minimum-stability": "dev",
     "stability-flags": {
-        "markdown-office/markdown-word": 20,
-        "markdown-presentation/markdown-presentation": 20
+        "markdown-office/markdown-presentation": 20,
+        "markdown-office/markdown-word": 20
     },
     "prefer-stable": true,
     "prefer-lowest": false,

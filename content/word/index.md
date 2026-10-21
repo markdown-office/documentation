@@ -246,14 +246,16 @@ zip and Markdown is text, and the four bytes that say which is which are part of
 | `-o, --output <file>` | path | beside the input; `-` for standard output |
 | `-c, --config <file.php>` | path | none |
 | `--theme <name>` | name or path | the frontmatter's `theme:` |
-| `-t, --template <file>` | `.docx` or `.dotx` | none — `.docx` only |
+| `-t, --template <file>` | `.docx` or `.dotx` | none |
 | `--require-control` | flag | off |
 | `--images <mode>` | `embed`, `placeholder`, `skip` | `embed` |
 | `--no-images` | flag | shorthand for `--images skip` |
-| `--image-base <dir>` | path | the input's directory |
+| `--image-base <dir>` | path | the input's directory; the working directory for standard input |
 | `--svg-fallback <mode>` | `raster`, `none` | `raster` |
-| `--table-width <n>` | 0–5000 | `5000` |
+| `--table-width <n>` | fiftieths of a percent; 0–5000 | `5000` |
 | `--plain` | flag | off |
+| `--to <format>` | `docx`, `word` for `to-docx`; `odt` for `to-odt`; `rtf` for `to-rtf` | the command names the direction |
+| `-h, --help` | flag | off |
 
 `to-markdown` takes `--media <dir>`, `--line-ending <lf|crlf>`, `--setext`, `--no-fence` and
 `--no-header` instead.
@@ -264,8 +266,9 @@ A filter, not a command that needs a filename:
 cat notes.md | mdoffice word --to docx - -o - | pbcopy
 ```
 
-Exit `0` on success, `1` for a bad input or a configuration problem, printed as the sentence alone
-— no class name, no line from any repository — because it is the caller's mistake to fix.
+Exit `0` on success, `1` for a bad input or a configuration problem, printed as the sentence
+alone because it is the caller's mistake to fix. A defect is a different thing, and it is printed
+with its class and the line it happened on.
 
 More, including the other half, the downloads and the error messages:
 [The command line](/guides/command-line/).

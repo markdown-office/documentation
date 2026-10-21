@@ -28,6 +28,9 @@ The watcher defaults to **8123**. Eleventy's own default is 8080, which is a pop
 the machine this was written on was already something else's — the failure that causes is an
 "address in use", and nothing about it points at the real problem. `PORT` overrides it.
 
+The watcher serves the site under the path the site is published under, so the address is
+<http://localhost:8123/documentation/> and not the root of the port.
+
 ## Why the examples are not screenshots
 
 A documented example is a claim about what a library does. A claim written by hand is correct only
@@ -114,13 +117,49 @@ over the finished pages reaches both the prose blocks and the example sources.
 All four are generated from the sources, not from the rendered HTML — a `llms-full.txt` full of
 `<h2>` is not a Markdown file.
 
+Those are the site's own routes. The site is served under a path — `/documentation` for as
+long as it is on GitHub Pages — and the built files carry it: the addresses in `llms.txt` and
+`pages.json` are absolute, and the links inside the Markdown mirrors are the routes with that
+path in front of them.
+
+## Where it is published
+
+`.github/workflows/pages.yml` builds the site and publishes it to
+**<https://markdown-office.github.io/documentation/>**. A push to `main` deploys it; a pull
+request builds it and proves it is sound, without publishing it.
+
+`MARKDOWN_OFFICE_CANONICAL` is the address the site is served from, path included, and it is
+the only setting there is. The path in it is the path the site is mounted under — a project
+site on GitHub Pages is served under the repository's name — so that one setting decides the
+canonical addresses, the links in the built pages, and the address the READMEs of the other
+repositories point at. Move the site to the root of a host and the setting loses its path, and
+the site is built for the root instead.
+
+The build checks its own links before it publishes:
+
+```bash
+npm run check:site
+```
+
+Every root-relative link in the built HTML has to point at a page that is in the site, and
+every page has to be canonical at the address it is served from. A site whose links 404 is
+worse than no site, and nothing else says so.
+
+### The custom domain
+
+`markdown-office.dev` is registered but has no DNS records, so GitHub cannot verify it. A
+`CNAME` naming it would leave the site published at an address that does not resolve, and
+that is the one thing the site must not be. There is no `CNAME` file, deliberately: the file
+is added in the same commit that points the domain at GitHub and moves the canonical address
+to it, and the site is published at the GitHub Pages address until then.
+
 ## Layout
 
 ```text
 content/          the pages
 _includes/        the layout, the stylesheet, the wordmark
-tools/            render-examples.php, and lib/ — the PHP that builds the examples
-_examples/        built artifacts, published at /examples. Not committed.
+tools/            render-examples.php, the two link checks, and lib/ — the PHP that builds the examples
+_examples/        built artifacts, published under the site's own path. Not committed.
 _data/            examples.json, written by the example builder. Not committed.
 _site/            the built site. Not committed.
 ```
