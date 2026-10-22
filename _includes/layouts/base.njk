@@ -31,27 +31,64 @@
 
     <div class="shell">
       <header class="side">
-        <a class="side__mark" href="/" aria-label="{{ suite.name }}, home">
-          {{ wordmark | safe }}
-        </a>
+        <div class="side__bar">
+          <a class="side__mark" href="/" aria-label="{{ suite.name }}, home">
+            {{ wordmark | safe }}
+          </a>
 
-        <nav aria-label="Documentation">
-          {%- for group in groups %}
-          <div class="side__section">
-            <h2>{{ group.title }}</h2>
-            <p>{{ group.note }}</p>
-            <ul>
-              {%- for entry in group.pages %}
-              <li>
-                <a href="{{ entry.url }}"{% if entry.url == page.url %} aria-current="page"{% endif %}
-                  >{{ entry.data.title }}</a
-                >
-              </li>
-              {%- endfor %}
-            </ul>
+          {# The navigation is a drawer on a narrow screen, and this is the button that opens it.
+             It is a popover invoker: the browser opens the drawer, closes it on Escape, closes it
+             when the page outside is touched, and moves the focus into it and back — all of it
+             without a line of script, which is what the rest of this site is built on. #}
+          <button
+            class="burger"
+            type="button"
+            popovertarget="nav-drawer"
+            aria-controls="nav-drawer"
+          >
+            <span class="burger__bars" aria-hidden="true"></span>
+            <span>Menu</span>
+          </button>
+        </div>
+
+        {# The `autofocus` is what puts the focus in the drawer when it opens: a popover that is
+           not given one leaves the focus on the button that opened it, and that button is inert
+           the moment the drawer is over the page. The browser closes the drawer on Escape and
+           gives the focus back to the button it came from. #}
+        <div class="drawer" id="nav-drawer" popover>
+          <div class="drawer__head">
+            <a class="drawer__mark" href="/" aria-label="{{ suite.name }}, home">
+              {{ wordmark | safe }}
+            </a>
+            <button
+              class="drawer__close"
+              type="button"
+              popovertarget="nav-drawer"
+              popovertargetaction="hide"
+              autofocus
+            >
+              Close
+            </button>
           </div>
-          {%- endfor %}
-        </nav>
+
+          <nav aria-label="Documentation">
+            {%- for group in groups %}
+            <div class="side__section">
+              <h2>{{ group.title }}</h2>
+              <p>{{ group.note }}</p>
+              <ul>
+                {%- for entry in group.pages %}
+                <li>
+                  <a href="{{ entry.url }}"{% if entry.url == page.url %} aria-current="page"{% endif %}
+                    >{{ entry.data.title }}</a
+                  >
+                </li>
+                {%- endfor %}
+              </ul>
+            </div>
+            {%- endfor %}
+          </nav>
+        </div>
       </header>
 
       <main id="content" class="main">

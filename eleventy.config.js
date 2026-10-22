@@ -82,6 +82,14 @@ export default function (eleventyConfig) {
   eleventyConfig.addFilter("sections", sectionGroups);
   eleventyConfig.addFilter("pager", pager);
 
+  // A table wider than the screen scrolls inside a box of its own rather than widening the page.
+  // The wrapper is what it scrolls in: a table made `display: block` would scroll too, but it
+  // stops being a table and the columns lose their alignment.
+  eleventyConfig.amendLibrary("md", (md) => {
+    md.renderer.rules.table_open = () => '<div class="table-scroll">\n<table>';
+    md.renderer.rules.table_close = () => "</table>\n</div>";
+  });
+
   eleventyConfig.addGlobalData("suite", () => ({
     name: "Markdown Office",
     canonical,
