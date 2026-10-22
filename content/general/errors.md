@@ -1,10 +1,10 @@
 ---
 layout: layouts/base.njk
-permalink: /reference/errors/
-title: Errors
-summary: Every exception in the suite, and the one to catch for each package.
-section: Reference
-order: 0
+permalink: /errors/
+title: Errors in general
+summary: The exception to catch for each package, the two classes that share a name, and what the messages say about paths and losses.
+section: In general
+order: 3
 ---
 
 An exception is only useful if it says what to do next. Every message in this suite names the
@@ -34,48 +34,6 @@ author can fix by naming something else extend `Exception\InvalidInput` below it
 
 One sits beside those two rather than under `InvalidInput`: `Exception\UnreadablePackage`. Nothing
 a deck names fixes a package that is not a package.
-
-## Word
-
-| Exception | Means |
-| --- | --- |
-| `InvalidConfiguration` | the key half; the base for the next one |
-| `UnknownConfigurationKey` | a key nothing reads |
-| `InvalidConfigurationValue` | a key whose value is not what it is used as |
-| `InvalidInput` | the base for input-shaped failures |
-| `NothingToConvert` | no Markdown was given |
-| `UnreadableFile` | the input is not a file |
-| `UnreadableDocument` | the bytes are not a Word document |
-| `MalformedDocument` | it is one, and it is broken |
-| `FileNotWritable` | the target cannot be written |
-| `TemplateNotFound` | `template_file:` names nothing |
-| `NoContentControl` | `--require-control`, and the template has none |
-| `MalformedTheme` | a theme file is not shaped like one |
-| `ThemeNotFound` | a theme name resolves to nothing — the message lists the ones that do |
-| `UnknownStyleSlot` | `styles:` names a slot that does not exist |
-| `UnsupportedElement` | something in the document cannot be drawn |
-| `UnsupportedImageFormat` | see [Images](/guides/images/) |
-
-## Presentation
-
-| Exception | Means |
-| --- | --- |
-| `InvalidInput` | the base for everything a deck author can fix |
-| `UnknownDirective` | a key or marker outside the closed set — the message names the set |
-| `UnknownMarker` | `::click=0`, backwards, over 500, unclosed, or a stray closer |
-| `UnknownLayoutRole` | `layout:` is not one of the eight |
-| `UnsupportedColumn` | more `::column` markers than the layout has columns |
-| `UnsupportedImageFormat` | not an image, no decoder, or over the ceiling |
-| `UnsupportedLink` | `javascript:`, `data:`, `phar://`, `file://`, a UNC share |
-| `ContentOverflow` | a block does not fit and `strict` is on |
-| `TooManySlides` | more than 1000 |
-| `MalformedFrontmatter` | not a mapping, or a value of the wrong type |
-| `FencedFrontmatter` | a ```` ```yaml ```` block at the top of a slide |
-| `MalformedTheme` / `ThemeNotFound` | as above |
-| `UnknownStyleSlot` | `styles.yml` names a slot that does not exist |
-| `MalformedTemplate` | a `template.pptx` is not one |
-| `ImageNotFound` | a path, a URL, or something outside the roots |
-| `UnreadablePackage` | **not** `InvalidInput`; nothing a deck names fixes it |
 
 ## The two `UnknownDirective`
 

@@ -1,10 +1,10 @@
 ---
 layout: layouts/base.njk
-permalink: /guides/images/
+permalink: /images/
 title: Images
 summary: What is carried, what is converted, what is refused, and the pixel ceiling that makes a 152-byte file expensive.
-section: Guides
-order: 1
+section: In general
+order: 2
 ---
 
 ## The decision
@@ -75,14 +75,3 @@ rasteriser drew, not what the file described — and:
   comes out identical to the "that family does not exist" fallback. Nothing detects this; it is
   documented here because it costs an afternoon otherwise.
 
-## Word specifically
-
-| Option | Default | |
-| --- | --- | --- |
-| `images` | `embed` | `embed`, `placeholder`, `skip` |
-| `imageMaxWidth` | `15.0` | centimetres |
-| `svgFallback` | `raster` | `none` for readers that can take the vector |
-
-`pendingImageConversions()` reports what was converted, and `pendingLosses()` says when the vector
-was written with no raster beside it — which means a reader that does not prefer the vector draws
-nothing at all where an SVG was.

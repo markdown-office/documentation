@@ -48,11 +48,10 @@ const pathPrefix = mountPath(canonical);
  * nobody will find and dropping it would hide the mistake rather than fix it.
  */
 const SECTIONS = [
-  ["Markdown Word", "The dialect, the command line, and the library."],
-  ["Markdown Presentation", "The dialect, and the library."],
-  ["Directives", "The one syntax both read, and what each draws."],
-  ["Guides", "The parts a reader needs once the first file worked."],
-  ["Reference", "Every key, every value, every error."],
+  ["Markdown Word", "The dialect, the directives, the configuration, and the errors."],
+  ["Markdown Presentation", "The dialect, the directives, the themes, and the errors."],
+  ["In general", "The parts that are about both libraries."],
+  ["The command line", "One command over both of them."],
   ["The suite", "The other packages, and where this is going."],
 ];
 
@@ -586,15 +585,20 @@ function sectionGroups(entries) {
   // `collections.all | sections` passes the array, not the object that holds it.
   const pages = (entries ?? []).filter((entry) => entry.url !== "/" && entry.data?.section);
 
+  // The order the pages are in is the one they declare, not the order the collection happens to
+  // hold them in: a menu that lists its chapters in the order the files were written is a menu
+  // that reorders itself when a page is edited.
+  const byOrder = (a, b) => a.data.order - b.data.order || a.data.title.localeCompare(b.data.title);
+
   const known = SECTIONS.map(([title, note]) => ({
     title,
     note,
-    pages: pages.filter((entry) => entry.data.section === title),
+    pages: pages.filter((entry) => entry.data.section === title).sort(byOrder),
   })).filter((group) => group.pages.length > 0);
 
-  const elsewhere = pages.filter(
-    (entry) => !SECTIONS.some(([title]) => title === entry.data.section),
-  );
+  const elsewhere = pages
+    .filter((entry) => !SECTIONS.some(([title]) => title === entry.data.section))
+    .sort(byOrder);
 
   return elsewhere.length
     ? [

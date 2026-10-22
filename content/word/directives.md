@@ -1,10 +1,10 @@
 ---
 layout: layouts/base.njk
-permalink: /directives/word/
+permalink: /word/directives/
 title: Word directives
 summary: ::toc and :footnote are drawn. Everything else is written into the document exactly as the author typed it.
-section: Directives
-order: 2
+section: Markdown Word
+order: 1
 ---
 
 Markdown Word draws **two** directives. Both are real Word features rather than Markdown dressed

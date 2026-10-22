@@ -29,7 +29,7 @@ entry point, and `PresentationRenderer` has two methods: `render()` and `overflo
 **Slidev-inspired.** A deck is Markdown split on `---`. The splitter is a **port of Slidev's
 `parseSync`** pinned to a commit, so a deck written for Slidev splits the same way here; the 21
 places it deliberately does not are written down in
-[Slidev, and where it differs](/directives/presentation/#slidev-and-where-it-differs).
+[Slidev, and where it differs](/presentation/directives/#slidev-and-where-it-differs).
 
 {% example "A deck with a title slide and a content slide" %}
 ````md presentation
@@ -128,7 +128,7 @@ fighting over, and they are separate keys so you can move one.
 Resolution is a path, then `<cwd>/themes/<name>`, then the package's own. **No silent fallback to
 `default`**: a name that does not resolve raises `ThemeNotFound` listing the ones that do.
 
-More, including `layouts.yml` and every built-in theme's numbers: [Themes and layout](/guides/themes/).
+More, including `layouts.yml` and every built-in theme's numbers: [Themes and layout](/presentation/themes/).
 
 ### Extended: directives
 
@@ -178,7 +178,7 @@ The closer for `:::click` is **exactly three colons**. An unclosed region is ref
 running to the end of the slide.
 
 More, including the refusal table and the three things that look like they work and do not:
-[Presentation directives](/directives/presentation/).
+[Presentation directives](/presentation/directives/).
 
 ---
 
@@ -260,7 +260,7 @@ raster means decoding it, and decoding is what allocates the memory you were try
 halves read the size from the header without drawing, so a **152-byte** file declaring a
 16000-square drawing is refused in 0.05 s with a 4 MB peak.
 
-More, and the reason there is no second line of defence: [Images](/guides/images/).
+More, and the reason there is no second line of defence: [Images](/images/).
 
 ### Errors
 
@@ -282,12 +282,12 @@ try {
 One sits beside those two rather than under `InvalidInput`: `Exception\UnreadablePackage`. Nothing
 a deck names fixes a package that is not a package.
 
-The whole catalogue is on [Errors](/reference/errors/).
+The whole catalogue is on [Errors](/presentation/errors/).
 
 ---
 
 ## Next
 
 [Markdown Word](/word/) · [The directive syntax](/directives/syntax/) ·
-[Presentation directives](/directives/presentation/) · [Themes and layout](/guides/themes/) ·
-[Images](/guides/images/) · [Errors](/reference/errors/)
+[Presentation directives](/presentation/directives/) · [Themes and layout](/presentation/themes/) ·
+[Images](/images/) · [Errors](/presentation/errors/)

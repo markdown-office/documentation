@@ -1,10 +1,10 @@
 ---
 layout: layouts/base.njk
-permalink: /guides/round-trip/
+permalink: /word/round-trip/
 title: Round trips
 summary: Markdown to a document and back. What comes out the same, and the five things that do not.
-section: Guides
-order: 2
+section: Markdown Word
+order: 3
 ---
 
 Both directions are the same interface, so a round trip is two calls:
@@ -55,7 +55,7 @@ the field's content and finds a sentence.
 
 The second round trips only by accident: `:footnote[…]` does not currently produce a
 `footnotes.xml` at all, so what the reader finds is the source text that was always in the body.
-See [Word directives](/directives/word/).
+See [Word directives](/word/directives/).
 
 **Neither is a round trip you should build on.** A pipeline that edits documents in Word and reads
 them back should treat directives as one-way.

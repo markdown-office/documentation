@@ -176,7 +176,7 @@ to it, and the site is published at the GitHub Pages address until then.
 ## Layout
 
 ```text
-content/          the pages
+content/          the pages, one directory per chapter
 _includes/        the layout, the stylesheet, the wordmark
 _documents/       the documents the examples read. Committed: an input must not change.
 tools/            render-examples.php, make-input-document.php, the two link checks, and lib/
@@ -184,6 +184,11 @@ _examples/        built artifacts, published under the site's own path. Not comm
 _data/            examples.json, written by the example builder. Not committed.
 _site/            the built site. Not committed.
 ```
+
+`content/` is one directory per chapter: `word/`, `presentation/`, `general/`, `command-line/` and
+`suite/`. A page's `section` says which chapter it is in and its `order` says where in it, and the
+menu and the pager both read those two keys — the menu sorts by them rather than by the order the
+files happen to be read in.
 
 `tools/lib/` is a handful of small classes and an autoloader of their own, not a Composer package:
 the site is built by Eleventy and this is the part it cannot do, so there is no autoloader to

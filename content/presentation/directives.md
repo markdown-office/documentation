@@ -1,10 +1,10 @@
 ---
 layout: layouts/base.njk
-permalink: /directives/presentation/
+permalink: /presentation/directives/
 title: Presentation directives
 summary: ::click, :::click, ::column and ::note — plus the closed set of frontmatter keys, and everything the deck will refuse by name.
-section: Directives
-order: 3
+section: Markdown Presentation
+order: 1
 ---
 
 Markdown Presentation splits its vocabulary in two: **frontmatter keys**, which are configuration,
@@ -224,7 +224,7 @@ Lead with the renewal number. It is the one people remember.
 
 The splitter is a **port** of Slidev's `parseSync`, not a clone of it: a deck that splits the way
 Slidev splits is the point, and the places it deliberately does not are written down — see
-[Slidev, and where it differs](/directives/presentation/#slidev-and-where-it-differs).
+[Slidev, and where it differs](/presentation/directives/#slidev-and-where-it-differs).
 
 The renderer shares none of that. Everything Slidev draws with something this package does not
 have is refused by name rather than drawn as a paragraph:

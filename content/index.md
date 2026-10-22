@@ -36,7 +36,7 @@ back well — headings, emphasis, code, lists and tables all survive. Directives
 and are written down rather than glossed over: a `::toc` comes back as the text
 *"Press F9 to build the table of contents"*, which is what the document actually said, and a
 `:footnote[…]` comes back as itself because it was never a footnote in the first place. See
-[Round trips](/guides/round-trip/).
+[Round trips](/word/round-trip/).
 
 **PowerPoint is one direction.** There is no reader, no `.pptx` back to Markdown, and no plan to
 add one: a deck is a thing you present, and the interesting inverse problem — what someone edited
@@ -48,7 +48,7 @@ package solves.
 <ul class="cards">
 
 <li>
-<a class="card" href="/directives/word/">
+<a class="card" href="/word/directives/">
 <h3>Markdown Word</h3>
 <p>Markdown to <code>.docx</code>, <code>.odt</code> and <code>.rtf</code> — and back to
 Markdown. Templates, styles, headers and footers, and a table of contents that is a real Word
@@ -58,7 +58,7 @@ field.</p>
 </li>
 
 <li>
-<a class="card" href="/directives/presentation/">
+<a class="card" href="/presentation/directives/">
 <h3>Markdown Presentation</h3>
 <p>Markdown to <code>.pptx</code>, with a splitter ported from Slidev's. Layouts, themes,
 columns, click builds and speaker notes — and a refusal for anything it will not draw.</p>
@@ -76,7 +76,7 @@ parser extension, for your own directives if you want one.</p>
 </li>
 
 <li>
-<a class="card" href="/guides/command-line/">
+<a class="card" href="/command-line/basic/">
 <h3>mdoffice</h3>
 <p>The command line for both of them: <code>mdoffice word</code> and <code>mdoffice
 slides</code>. Requires both converters and calls them — a program, not a facade, so neither
@@ -92,7 +92,7 @@ package depends on it.</p>
 <ul class="actions">
 <li><a class="primary" href="/word/">Markdown Word</a></li>
 <li><a class="primary" href="/presentation/">Markdown Presentation</a></li>
-<li><a class="ghost" href="/guides/command-line/">The command line</a></li>
+<li><a class="ghost" href="/command-line/basic/">The command line</a></li>
 <li><a class="ghost" href="/directives/syntax/">The directive syntax</a></li>
 </ul>
 
@@ -121,4 +121,4 @@ A from-source build that omits either produces an archive that reports its versi
 cannot write anything.
 
 The command line needs none of this if you take a release instead: each executable carries its own
-PHP. See [the command line](/guides/command-line/).
+PHP. See [the command line](/command-line/basic/).

@@ -1,10 +1,10 @@
 ---
 layout: layouts/base.njk
-permalink: /guides/themes/
+permalink: /presentation/themes/
 title: Themes and layout
 summary: The twelve colour slots, the thirteen style keys, the eight layout roles, and the four themes that ship with the presentation package.
-section: Guides
-order: 0
+section: Markdown Presentation
+order: 2
 ---
 
 A theme is a directory. `theme.yml` is required; `styles.yml`, `layouts.yml` and
@@ -104,7 +104,7 @@ asked for is worse than a deck that did not build.
 
 The Word half has themes too, and they are the other shape: a directory with `theme.yml` —
 `name`, `description`, `author`, and `name` required — and an optional `styles.yml` holding the
-same slot names the [Word configuration](/guides/configuration-word/) page lists. Four ship:
+same slot names the [Word configuration](/word/configuration/) page lists. Four ship:
 `default`, `minimal`, `corporate`, `report`.
 
 A theme is a **starting point**, not a replacement: your own `styles:` sits on top of it, and
