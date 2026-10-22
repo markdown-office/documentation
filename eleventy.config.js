@@ -174,13 +174,21 @@ function example(content, ...args) {
  * inserted as-is rather than parsed, and the only thing to escape is what came out of a document.
  */
 function expandExamples(html) {
+  const shown = new Map();
+
   return String(html ?? "").replace(
     /<!--mo-example:([0-9a-f]{16}):([A-Za-z0-9+/=]*)-->/g,
-    (_, hash, encoded) => render(hash, Buffer.from(encoded, "base64").toString("utf8")),
+    (_, hash, encoded) => {
+      const occurrence = (shown.get(hash) ?? 0) + 1;
+
+      shown.set(hash, occurrence);
+
+      return render(hash, Buffer.from(encoded, "base64").toString("utf8"), occurrence);
+    },
   );
 }
 
-function render(hash, title) {
+function render(hash, title, occurrence) {
   const built = examples[hash];
   const source = built?.source ?? "";
 
@@ -204,13 +212,30 @@ function render(hash, title) {
   }
 
   const previews = (built.previews ?? [])
-    .map(
-      (href, index) =>
-        `<a class="example__page" href="${escape(href)}" target="_blank" rel="noopener">` +
-        `<img src="${escape(href)}" alt="${escape(title || built.name)}, page ${index + 1}"` +
+    .map((href, index) => {
+      const label = `${title || built.name}, page ${index + 1}`;
+      const id = `example-${hash}-${occurrence}-page-${index + 1}`;
+
+      // The thumbnail opens the picture over the page rather than in a new tab, and it opens
+      // it with CSS alone: the link points at the overlay's id, and the overlay is shown when
+      // it is the target of the page's fragment. The browser's back button closes it again,
+      // and so does the link in its corner.
+      //
+      // The picture is offered on its own as well, because a reader who wants the file is
+      // not served by a picture of it.
+      return (
+        `<a class="example__page" href="#${id}">` +
+        `<img src="${escape(href)}" alt="${escape(label)}"` +
         ` loading="lazy" decoding="async">` +
-        `<span class="example__page-no">${index + 1}</span></a>`,
-    )
+        `<span class="example__page-no">${index + 1}</span></a>` +
+        `<div class="overlay" id="${id}">` +
+        `<a class="overlay__backdrop" href="#example-${hash}-${occurrence}" tabindex="-1" aria-hidden="true"></a>` +
+        `<img class="overlay__image" src="${escape(href)}" alt="${escape(label)}">` +
+        `<a class="overlay__open" href="${escape(href)}" target="_blank" rel="noopener">Open the image</a>` +
+        `<a class="overlay__close" href="#example-${hash}-${occurrence}">Close</a>` +
+        `</div>`
+      );
+    })
     .join("");
 
   const body = previews
@@ -227,7 +252,7 @@ function render(hash, title) {
       ].join("");
 
   return [
-    `<figure class="example" data-language="${escape(built.language)}">`,
+    `<figure class="example" id="example-${hash}-${occurrence}" data-language="${escape(built.language)}">`,
     head(built, title),
     sourceOf(source, built),
     body,
