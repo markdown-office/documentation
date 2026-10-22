@@ -46,12 +46,11 @@ including one where an example claimed a Word footnote that the converter did no
 ```text
 content/
 ├── index.md                 the home page
-├── word/index.md            Markdown Word
-├── presentation/index.md    Markdown Presentation
-├── directives/              index.md, syntax.md
-├── guides/                  themes.md, images.md, round-trip.md
-├── reference/               errors.md, command-line.md
-├── suite/                   spreadsheet.md
+├── word/                    the dialect, the directives, the configuration, the round trips, the images, the errors
+├── presentation/            the dialect, the directives, the themes, the errors
+├── general/                 how directives work, the syntax, the images, the errors
+├── command-line/            the installation, the basic use, the options of each half
+├── suite/                   the other packages
 └── llms/                    llms.txt.njk, pages.json.njk
 ```
 
@@ -71,7 +70,7 @@ order: 0
 ---
 ```
 
-`section` must be one of the six in `SECTIONS` in `eleventy.config.js`. A page naming something
+`section` must be one of the five in `SECTIONS` in `eleventy.config.js`. A page naming something
 else is listed under **Elsewhere** rather than dropped, so a typo is visible instead of silent.
 
 **Every route has a Markdown representation**, and the build fails without one. It is checked
@@ -189,6 +188,12 @@ _site/            the built site. Not committed.
 `suite/`. A page's `section` says which chapter it is in and its `order` says where in it, and the
 menu and the pager both read those two keys — the menu sorts by them rather than by the order the
 files happen to be read in.
+
+The navigation is one list in the layout, and it is a **popover**: on a narrow screen it is a
+drawer over the page, opened by the button in the bar, and on a wide one it is the column of
+links beside the page. The browser opens it, closes it on Escape, closes it when the page outside
+is touched, and moves the focus into it and back — so the drawer needs no script, and the site
+still ships none.
 
 `tools/lib/` is a handful of small classes and an autoloader of their own, not a Composer package:
 the site is built by Eleventy and this is the part it cannot do, so there is no autoloader to
