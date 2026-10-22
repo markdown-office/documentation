@@ -217,7 +217,7 @@ function render(hash, title) {
     ? `<div class="example__pages">${previews}</div>${downloads(built)}`
     : [
         '<p class="example__notice">This example built. It has no preview image, because the machine ',
-        'that built this page had no LibreOffice to render one with. What follows is ',
+        'that built this page had no WordCraft or DeckCraft to draw it with. What follows is ',
         built.role === "source"
           ? "the text of the document it read."
           : "read back out of the document it produced.",
@@ -238,7 +238,7 @@ function render(hash, title) {
 /**
  * The document's own text, as read out of the built file.
  *
- * The fallback for a machine with no LibreOffice, and a better one than a page of downloads with
+ * The fallback for a machine with no renderer, and a better one than a page of downloads with
  * nothing under them: this is read from the artifact rather than from the Markdown that produced
  * it, so a converter that dropped something shows up here as something missing.
  */

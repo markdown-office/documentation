@@ -5,43 +5,46 @@ declare(strict_types=1);
 namespace MarkdownOffice\Documentation\Tool;
 
 /**
- * Turns a built document into page images, by asking LibreOffice and PyMuPDF.
+ * Turns a built document into page images, by asking the tool that draws it.
  *
- * Neither is a dependency of the suite — both are here because a page of screenshots nobody
- * regenerated is a page that goes stale without anyone noticing. When a converter is missing, or
- * present and broken, the answer is a document with no preview image rather than a failed build.
- * The `.docx` *is* the product; the preview is a courtesy.
+ * A Word document is drawn by WordCraft and a deck by DeckCraft — the two clean-room
+ * reimplementations of Word and PowerPoint. Neither is a dependency of the suite: they are here
+ * because a page of screenshots nobody regenerated is a page that goes stale without anyone
+ * noticing. When a tool is missing, or present and broken, the answer is a document with no
+ * preview image rather than a failed build. The `.docx` *is* the product; the preview is a
+ * courtesy.
  *
- * Two things that are true of `soffice` shape this class.
+ * They are also quick. A conversion takes a fraction of a second, and the fonts they draw with
+ * ship with them, so a document looks the same on the machine that drew it as on the machine that
+ * built it — which is what makes a picture of a document worth publishing.
  *
- * The first is that it locks. A second `soffice` started while one is running attaches itself to
- * the first and writes into the first's directory, so every run gets a private profile and every
- * run has to be finished before the next one starts.
+ * The PDF one of them writes is the file the page offers as a download, and the page images are
+ * read out of it: one rendering, and a set of files that agree with each other.
  *
- * The second is that it can die instead of returning. A crash leaves a core-dumping process with
- * no exit status and a pipe that never closes, and `proc_open()` waits for that forever. Every
- * command here therefore has a deadline, and a command past it is killed rather than waited on.
- * Without that a broken LibreOffice hangs the build instead of degrading it.
+ * Every command here has a deadline, and one that passes it is killed rather than waited on: a
+ * tool that hangs must hang its own step, not the whole build.
  */
 final class Preview
 {
     private const DPI = 120;
     private const SECONDS = 120;
 
-    /** @var list<string> */
-    private const LIBREOFFICE = [
-        '/Applications/LibreOffice.app/Contents/MacOS/soffice',
-        '/usr/bin/soffice',
-        '/usr/bin/libreoffice',
-        '/usr/lib/libreoffice/program/soffice',
+    /**
+     * The tool that draws each kind of document, and the name it is called by.
+     *
+     * @var array<string, array{command: string, name: string}>
+     */
+    private const DRAWERS = [
+        'docx' => ['command' => 'wordcraft-cli', 'name' => 'WordCraft'],
+        'pptx' => ['command' => 'deckcraft-cli', 'name' => 'DeckCraft'],
     ];
 
-    /** Whether this machine can convert anything at all. Asked once, because asking is the cost. */
-    private ?bool $usable = null;
-
-    private ?string $reason = null;
-
-    public function __construct(private readonly string $scratch) {}
+    /**
+     * The command that draws each kind of document, asked once because asking is the cost.
+     *
+     * @var array<string, string|null>
+     */
+    private array $tools = [];
 
     /**
      * What is missing, or broken, said once at the end of the build rather than once per example.
@@ -50,19 +53,23 @@ final class Preview
      */
     public function missing(): array
     {
-        if (self::libreoffice() === null) {
-            return ['LibreOffice, so no example has a preview image'];
-        }
+        $missing = [];
 
-        if ($this->usable === false && $this->reason !== null) {
-            return [$this->reason];
+        foreach (self::DRAWERS as $extension => $drawer) {
+            if ($this->tool($extension) === null) {
+                $missing[] = \sprintf(
+                    '%s, so no %s example has a preview image',
+                    $drawer['name'],
+                    $extension,
+                );
+            }
         }
 
         if (self::python() === null) {
-            return ['python3 with PyMuPDF, so no PDF becomes page images'];
+            $missing[] = 'python3 with PyMuPDF, so no PDF becomes page images';
         }
 
-        return [];
+        return $missing;
     }
 
     /**
@@ -72,11 +79,14 @@ final class Preview
      */
     public function pagesOf(string $document): array
     {
-        if (! $this->canConvert()) {
+        $extension = \strtolower(\pathinfo($document, \PATHINFO_EXTENSION));
+        $tool = $this->tool($extension);
+
+        if ($tool === null) {
             return ['pdf' => '', 'pages' => []];
         }
 
-        $pdf = $this->pdfFrom($document);
+        $pdf = $this->pdfFrom($document, $tool);
 
         if ($pdf === '') {
             return ['pdf' => '', 'pages' => []];
@@ -86,79 +96,30 @@ final class Preview
     }
 
     /**
-     * Whether this machine converts at all, found by converting the smallest thing there is.
+     * The PDF a tool writes for a document.
      *
-     * A probe rather than a check for the binary's existence, because LibreOffice can be
-     * installed and still be unable to start — a crash on this machine reported `soffice
-     * --version` perfectly and then aborted on the first real conversion. Existence is not
-     * capability, and a build that discovers the difference once per example costs a minute each
-     * time.
+     * Both tools take the same two arguments and write the same kind of file, and the PDF is
+     * what the page offers as a download as well as what the page images are read out of.
      */
-    private function canConvert(): bool
+    private function pdfFrom(string $document, string $tool): string
     {
-        if ($this->usable !== null) {
-            return $this->usable;
-        }
-
-        $soffice = self::libreoffice();
-
-        if ($soffice === null) {
-            return $this->usable = false;
-        }
-
-        @\mkdir($this->scratch . '/probe', 0o777, true);
-        $source = $this->scratch . '/probe/probe.txt';
-        \file_put_contents($source, "probe\n");
-
-        $profile = $this->scratch . '/lo-probe-' . \bin2hex(\random_bytes(6));
-        $result = $this->run(\sprintf(
-            '%s -env:UserInstallation=%s --headless --norestore --convert-to pdf --outdir %s %s',
-            \escapeshellarg($soffice),
-            \escapeshellarg('file://' . $profile),
-            \escapeshellarg(\dirname($source)),
-            \escapeshellarg($source),
-        ), 90);
-
-        $this->remove($profile);
-        @\unlink($source);
-        @\unlink(\dirname($source) . '/probe.pdf');
-
-        if ($result['code'] === 0 && \is_file(\dirname($source) . '/probe.pdf')) {
-            return $this->usable = true;
-        }
-
-        $this->reason = $result['timedOut']
-            ? 'a working LibreOffice, which is installed but did not finish a one-line conversion'
-            : 'a working LibreOffice, which is installed but failed to convert anything';
-
-        return $this->usable = false;
-    }
-
-    private function pdfFrom(string $document): string
-    {
-        $soffice = self::libreoffice();
         $target = \dirname($document) . '/' . \pathinfo($document, \PATHINFO_FILENAME) . '.pdf';
 
         @\unlink($target);
 
-        // A profile of its own per run, removed afterwards: LibreOffice leaves a few hundred
-        // files of its own state in it and none of them should outlive the conversion.
-        $profile = $this->scratch . '/lo-' . \bin2hex(\random_bytes(6));
-
         $this->run(\sprintf(
-            '%s -env:UserInstallation=%s --headless --norestore --convert-to pdf --outdir %s %s',
-            \escapeshellarg((string) $soffice),
-            \escapeshellarg('file://' . $profile),
-            \escapeshellarg(\dirname($document)),
+            '%s convert %s %s',
+            \escapeshellarg($tool),
             \escapeshellarg($document),
+            \escapeshellarg($target),
         ), self::SECONDS);
-
-        $this->remove($profile);
 
         return \is_file($target) ? $target : '';
     }
 
     /**
+     * The page images of a PDF.
+     *
      * @return list<string>
      */
     private function imagesOf(string $pdf): array
@@ -184,7 +145,6 @@ final class Preview
             . 'out = pathlib.Path(sys.argv[2])'
             . "\n"
             . 'with pymupdf.open(sys.argv[1]) as d:'
-            . "\n"
             . '    [p.get_pixmap(dpi=%d).save(out / ("page-%%02d.png" %% (n + 1))) for n, p in enumerate(d)]',
             self::DPI,
         );
@@ -206,15 +166,26 @@ final class Preview
         return \array_values($pages);
     }
 
-    private static function libreoffice(): ?string
+    /**
+     * The command that draws a kind of document, or null when this machine has none.
+     *
+     * The tool is looked for on the path and then asked for its version: a command that cannot
+     * answer cannot draw either, and a broken tool is a tool the build must not wait on.
+     */
+    private function tool(string $extension): ?string
     {
-        foreach (self::LIBREOFFICE as $candidate) {
-            if (\is_file($candidate) && \is_executable($candidate)) {
-                return $candidate;
-            }
+        if (\array_key_exists($extension, $this->tools)) {
+            return $this->tools[$extension];
         }
 
-        return null;
+        $command = self::DRAWERS[$extension]['command'] ?? null;
+        $found = $command === null ? null : self::which($command);
+
+        if ($found !== null && ! $this->succeeds(\escapeshellarg($found) . ' --version')) {
+            $found = null;
+        }
+
+        return $this->tools[$extension] = $found;
     }
 
     private static function python(): ?string
@@ -312,9 +283,6 @@ final class Preview
         $deadline = \microtime(true) + $seconds;
         $open = [1 => $pipes[1], 2 => $pipes[2]];
 
-        // `proc_close()` blocks until the child is gone, so the child is reaped here instead: the
-        // pipes are drained while the process runs, and `proc_close()` afterwards returns at once
-        // because there is nothing left to wait for.
         while ($open !== []) {
             $ready = $open;
             $write = null;
@@ -325,12 +293,12 @@ final class Preview
                 break;
             }
 
-            foreach ($ready as $stream) {
+            foreach ($ready as $key => $stream) {
                 $chunk = \fread($stream, 8192);
 
                 if ($chunk === false || $chunk === '') {
                     if (\feof($stream)) {
-                        unset($open[(int) $stream]);
+                        unset($open[$key]);
                     }
 
                     continue;
@@ -352,21 +320,5 @@ final class Preview
         }
 
         return ['code' => \proc_close($process), 'output' => $output, 'timedOut' => false];
-    }
-
-
-    private function remove(string $path): void
-    {
-        if (\is_dir($path)) {
-            foreach (\glob($path . '/*') ?: [] as $child) {
-                $this->remove($child);
-            }
-
-            @\rmdir($path);
-
-            return;
-        }
-
-        @\unlink($path);
     }
 }

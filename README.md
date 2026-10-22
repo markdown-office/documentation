@@ -205,9 +205,16 @@ built as one, with its own reasons.
 
 ## When there are no preview images
 
-A page image needs LibreOffice, and a build machine may not have a working one. The build probes
-once and **degrades rather than hanging**: every command has a deadline, because a crashed
-`soffice` leaves a process that never exits and `proc_close()` waits for that forever.
+A page image needs a renderer, and a build machine may not have one. A Word document is drawn by
+[WordCraft](https://github.com/storytold/wordcraft) and a deck by
+[DeckCraft](https://github.com/storytold/deckcraft) — both are looked for on the path as
+`wordcraft-cli` and `deckcraft-cli` — and the build **degrades rather than hanging** when they
+are missing: every command has a deadline, and a document it cannot draw gets no picture rather
+than a failed build.
+
+The published site has the pictures: the workflow installs both tools before it builds, so the
+images are drawn on the machine that publishes the pages rather than on the one that wrote them.
+The fonts the tools draw with ship with them, so a document looks the same wherever it is drawn.
 
 With no picture, each example shows its document's text read back out of the built `.docx` or
 `.pptx` — read from the artifact rather than from the Markdown that produced it, so it is evidence
