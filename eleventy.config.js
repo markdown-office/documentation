@@ -183,14 +183,12 @@ function expandExamples(html) {
 function render(hash, title) {
   const built = examples[hash];
   const source = built?.source ?? "";
-  const language = source.match(/^`{3,}md[ \t]+(word|presentation)/m)?.[1] ?? "";
 
   if (!built) {
     return [
       '<figure class="example example--missing">',
       '<p class="example__failure"><strong>No build was found for this example.</strong>',
-      "Run <code>npm run examples</code> to build it",
-      language ? ` — it is tagged <code>md ${escape(language)}</code>.` : ".",
+      "Run <code>npm run examples</code> to build it.",
       "</p></figure>",
     ].join("");
   }
@@ -200,7 +198,7 @@ function render(hash, title) {
       `<figure class="example example--failed" data-language="${escape(built.language)}">`,
       head(built, title),
       `<p class="example__failure"><strong>This example did not build.</strong> ${escape(built.failure)}</p>`,
-      sourceOf(source),
+      sourceOf(source, built),
       "</figure>",
     ].join("");
   }
@@ -219,8 +217,11 @@ function render(hash, title) {
     ? `<div class="example__pages">${previews}</div>${downloads(built)}`
     : [
         '<p class="example__notice">This example built. It has no preview image, because the machine ',
-        'that built this page had no LibreOffice to render one with. What follows is read back ',
-        'out of the document it produced.</p>',
+        'that built this page had no LibreOffice to render one with. What follows is ',
+        built.role === "source"
+          ? "the text of the document it read."
+          : "read back out of the document it produced.",
+        "</p>",
         outline(built),
         downloads(built),
       ].join("");
@@ -228,7 +229,7 @@ function render(hash, title) {
   return [
     `<figure class="example" data-language="${escape(built.language)}">`,
     head(built, title),
-    sourceOf(source),
+    sourceOf(source, built),
     body,
     "</figure>",
   ].join("");
@@ -267,17 +268,22 @@ function head(built, title) {
     '<figcaption class="example__head">' +
     `<span class="example__badge">${built.language === "presentation" ? "PowerPoint" : "Word"}</span>` +
     `<span class="example__name">${escape(title || built.name)}</span>` +
-    '<span class="example__made">built by the library this page documents</span>' +
+    `<span class="example__made">${built.role === "source" ? "read" : "built"} by the library this page documents</span>` +
     "</figcaption>"
   );
 }
 
-function sourceOf(source) {
+function sourceOf(source, built) {
   // Open, not folded. A reader came to this page for the Markdown, and the document below is
   // what proves it — so the Markdown is the first thing in the figure rather than a disclosure
   // under a summary they have to guess is there.
+  //
+  // The summary says which Markdown it is, because an example that reads a document shows the
+  // Markdown that came out of it rather than the one that went in.
   return (
-    '<details class="example__source" open><summary>The Markdown</summary>' +
+    `<details class="example__source" open><summary>${
+      built?.role === "source" ? "The Markdown it reads back as" : "The Markdown"
+    }</summary>` +
     `<pre><code class="language-markdown">${escape(source)}</code></pre></details>`
   );
 }
@@ -290,8 +296,10 @@ function downloads(built) {
       download(
         built.document,
         built.document.split("/").pop(),
-        "The document this example built, editable in Word, LibreOffice or Google Docs",
-        "source",
+        built.role === "source"
+          ? "The document this example read, editable in Word, LibreOffice or Google Docs"
+          : "The document this example built, editable in Word, LibreOffice or Google Docs",
+        built.role,
       ),
     );
   }

@@ -9,7 +9,7 @@ declare(strict_types=1);
  *   php tools/render-examples.php            build the examples
  *   php tools/render-examples.php --strict   ... and exit non-zero if one did not build
  *
- * A page carries an example as a fence tagged `md word` or `md presentation` between a pair of
+ * A page carries an example as a fence tagged with the direction it runs in, between a pair of
  * tags:
  *
  *     {% example "A titled Word document" %}
@@ -18,9 +18,15 @@ declare(strict_types=1);
  *     ```
  *     {% endexample %}
  *
- * This script finds those, hands the fence's own text to `MarkdownToWord` or
- * `PresentationRenderer`, and writes three things: the document, a PDF and a page image or two
- * produced by LibreOffice, and a line in `_data/examples.json` naming them.
+ * The tag says where the example starts and where it ends: `md word` builds a Word document
+ * from Markdown, `md presentation` builds a deck, and `word md` reads a Word document back
+ * into Markdown. The body of the fence is the input — the Markdown for the first two, the
+ * path of the document for the last.
+ *
+ * This script finds those, hands the fence's own text to `MarkdownToWord`,
+ * `PresentationRenderer` or `WordToMarkdown`, and writes three things: the document, a PDF and
+ * a page image or two produced by the tool that draws that kind of document, and a line in
+ * `_data/examples.json` naming them.
  *
  * It writes *facts*, not markup. The HTML around an example is built by the Eleventy shortcode
  * that reads this manifest, so there is one place that decides what an example looks like and it
@@ -68,7 +74,7 @@ final class Pending
     public function __construct(
         public readonly string $file,
         public readonly string $hash,
-        public readonly string $language,
+        public readonly string $direction,
         public readonly string $name,
         public readonly string $source,
     ) {}
@@ -113,37 +119,54 @@ function find(string $directory): array
         foreach ($matches as $match) {
             $body = $match[2];
 
-            // A fence of three or more backticks, tagged `md word` or `md presentation`, closed
-            // by a run of the same length. The same length is what lets an example that itself
-            // contains a fenced block be written with four backticks.
+            // A fence of three or more backticks, tagged with the direction it runs in —
+            // `md word`, `md presentation` or `word md` — closed by a run of the same length.
+            // The same length is what lets an example that itself contains a fenced block be
+            // written with four backticks.
             //
-            // A quoted title may follow the language on the fence line. It is the same title the
+            // A quoted title may follow the direction on the fence line. It is the same title the
             // paired tag can carry, and a page that writes the title once in the fence and once
             // in the tag is a page with two places to keep them in step.
             \preg_match(
-                '/^(`{3,})md[ \t]+(word|presentation)[ \t]*(?:"([^"]*)")?[ \t]*\n([\s\S]*?)^\1[ \t]*$/m',
+                '/^(`{3,})(md|word|presentation)[ \t]+(md|word|presentation)[ \t]*(?:"([^"]*)")?[ \t]*\n([\s\S]*?)^\1[ \t]*$/m',
                 $body,
                 $fence,
             );
 
             if ($fence === []) {
-                \fwrite(\STDERR, \sprintf("  %s: an {%% example %%} block has no `md word` or `md presentation` fence.\n", $file));
+                \fwrite(\STDERR, \sprintf(
+                    "  %s: an {%% example %%} block has no `md word`, `md presentation` or `word md` fence.\n",
+                    $file,
+                ));
                 continue;
             }
 
-            // What goes to the library is the body of the fence, without its backticks.
+            $direction = $fence[2] . '-' . $fence[3];
+
+            if (! isset(Runner::DIRECTIONS[$direction])) {
+                \fwrite(\STDERR, \sprintf(
+                    "  %s: an {%% example %%} block runs in the direction \"%s\", which the site does not build.\n",
+                    $file,
+                    $direction,
+                ));
+                continue;
+            }
+
+            // What goes to the library is the body of the fence, without its backticks: the
+            // Markdown for a direction that builds a document, the path of the document for one
+            // that reads it.
             //
             // The trim is load-bearing for the document as well as for the key: a deck's
             // frontmatter is matched at the first byte of the file, so an example whose source
             // began with a blank line would put `theme:` on slide 2 and be refused for naming a
             // deck directive there.
-            $source = \trim($fence[4]);
+            $source = \trim($fence[5]);
 
             // The tag wins over the fence, because the tag is the one an author edits when they
             // are looking at the `{% example %}` and not at the fence inside it.
             $title = \trim(\trim($match[1]), '"');
-            $title = $title === '' ? \trim($fence[3] ?? '', '"') : $title;
-            $title = $title !== '' ? $title : $fence[2] . ' example';
+            $title = $title === '' ? \trim($fence[4] ?? '', '"') : $title;
+            $title = $title !== '' ? $title : Runner::DIRECTIONS[$direction] . ' example';
 
             // The key is hashed from the *whole* trimmed block, fences included, because that is
             // what the Eleventy shortcode has to hand: it is given the text between the paired
@@ -153,7 +176,7 @@ function find(string $directory): array
             $found[] = new Pending(
                 \str_replace($directory . '/', '', $path),
                 \substr(\hash('sha256', $block), 0, 16),
-                $fence[2],
+                $direction,
                 $title,
                 $source,
             );
@@ -169,7 +192,7 @@ function find(string $directory): array
  * An example exists to demonstrate something, and one that has to be switched off is a page
  * teaching a feature that is not there. Saying so is more useful than silently dropping it.
  *
- * @return list<array{hash: string, reason: string, source: string, language: string, name: string}>
+ * @return list<array{hash: string, reason: string, source: string, language: string, role: string, name: string}>
  */
 function skipped(string $directory): array
 {
@@ -189,8 +212,8 @@ $skipped = skipped($contentDirectory);
 // One Preview for the whole build, not one per call: it caches whether this machine can
 // convert anything, and a second instance would answer "I don't know" and probe again for
 // every example.
-$preview = new Preview(\sys_get_temp_dir());
-$runner = new Runner($artifacts, '/examples', $preview);
+$preview = new Preview();
+$runner = new Runner($artifacts, '/examples', $preview, $root);
 
 $manifestDirectory = \dirname($manifest);
 @\mkdir($manifestDirectory, 0o777, true);
@@ -204,6 +227,7 @@ foreach ($skipped as $entry) {
 
     $entries[$hash] = [
         'language' => (string) ($entry['language'] ?? ''),
+        'role' => (string) ($entry['role'] ?? Runner::ROLE_OUTPUT),
         'name' => (string) ($entry['name'] ?? ''),
         'source' => (string) ($entry['source'] ?? ''),
         'document' => null,
@@ -218,10 +242,11 @@ foreach ($skipped as $entry) {
 }
 
 foreach ($pending as $example) {
-    $built = $runner->run($example->language, $example->hash, $example->name, $example->source);
+    $built = $runner->run($example->direction, $example->hash, $example->name, $example->source);
 
     $entries[$example->hash] = [
         'language' => $built->language,
+        'role' => $built->role,
         'name' => $built->label(),
         'source' => $built->source,
         'document' => $built->document,

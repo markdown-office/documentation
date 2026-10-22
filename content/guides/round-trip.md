@@ -26,22 +26,19 @@ convert(new WordToMarkdown('notes.docx'), 'notes.md');
 ## What survives
 
 For **standard Markdown** — headings, emphasis, inline code, links, lists, block quotes and tables
-— it is close to lossless, and it is worth trying before you assume otherwise:
+— it is close to lossless, and it is worth trying before you assume otherwise.
 
-```markdown
-# Title
+Here is a Word document, and the Markdown the reader makes of it. The document is a real file
+rather than a picture of one, and it can be downloaded and opened:
 
-Some **bold** and `code`.
-
-- one
-- two
-
-| A | B |
-| - | - |
-| 1 | 2 |
+{% example "A Word document read back to Markdown" %}
+```word md
+_documents/quarterly-report.docx
 ```
+{% endexample %}
 
-comes back as the same document, with the two changes below.
+The headings, the emphasis, the inline code, the link, the table, the list, the quote and the
+code block all came back. What follows is what did not.
 
 ## Directives do not come back
 

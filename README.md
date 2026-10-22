@@ -3,9 +3,10 @@
 The documentation site for the Markdown Office suite. **Eleventy builds the pages; PHP builds the
 examples.**
 
-Every fenced block tagged `md word` or `md presentation` on a page is converted by the library it
-documents, and the page shows what came out — the `.docx` or `.pptx` to download, and either a
-picture of it or the text read back out of the built file.
+Every fenced block tagged with the direction it runs in — `md word`, `md presentation` or
+`word md` — is converted by the library it documents, and the page shows what came out: the
+`.docx` or `.pptx` to download, and either a picture of it or the text read back out of the built
+file.
 
 ## Build it
 
@@ -93,6 +94,23 @@ The tag is paired rather than a bare fence so the fence stays a fence for the Ma
 which matters on the pages that document this syntax themselves. The fence needs **four** backticks
 when the example itself contains a fenced block.
 
+The fence's tag says which way the example runs: the format it starts in, and the format it ends
+in. `md word` builds a Word document from Markdown, `md presentation` builds a deck, and
+`word md` reads a Word document back into Markdown. The body of the fence is the input — the
+Markdown for the first two, the path of the document for the last, relative to the site's own
+directory:
+
+````markdown
+{% example "A Word document read back to Markdown" %}
+```word md
+_documents/quarterly-report.docx
+```
+{% endexample %}
+````
+
+The direction decides what the download on the page says: a document the example built is its
+**output**, and a document it read is its **source**.
+
 The shortcode emits an HTML comment and the layout expands it. That is not indirection for its own
 sake: a shortcode's output goes back into the Markdown *before* markdown-it runs, so a shortcode
 returning `<figure>` has its own contents read as Markdown. An `**` in a sample heading becomes
@@ -160,7 +178,8 @@ to it, and the site is published at the GitHub Pages address until then.
 ```text
 content/          the pages
 _includes/        the layout, the stylesheet, the wordmark
-tools/            render-examples.php, the two link checks, and lib/ — the PHP that builds the examples
+_documents/       the documents the examples read. Committed: an input must not change.
+tools/            render-examples.php, make-input-document.php, the two link checks, and lib/
 _examples/        built artifacts, published under the site's own path. Not committed.
 _data/            examples.json, written by the example builder. Not committed.
 _site/            the built site. Not committed.
@@ -168,6 +187,9 @@ _site/            the built site. Not committed.
 
 `tools/lib/` is four small classes and a three-line autoloader, not a Composer package: the site is
 built by Eleventy and this is the part it cannot do, so there is no autoloader to configure.
+
+`tools/make-input-document.php` writes the document in `_documents/`. It is run by hand, and its
+result is committed: see `_documents/README.md` for why an input must not be built.
 
 ## Why there is no HTTP endpoint
 
