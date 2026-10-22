@@ -28,7 +28,7 @@ jobs:
       # The address the site is served from, path included. The path in it is the path the
       # site is mounted under, so this one setting decides both the canonical addresses and
       # the links in the built pages.
-      MARKDOWN_OFFICE_CANONICAL: https://markdown-office.github.io/documentation
+      MARKDOWN_OFFICE_CANONICAL: https://markdown-office.github.io
     steps:
       # This repository with the three libraries beside it, because the manifest's `path`
       # entries resolve by directory and `../markdown-word` means nothing in any other

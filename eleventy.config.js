@@ -26,7 +26,7 @@ const here = dirname(fileURLToPath(import.meta.url));
  * moving the site is a matter of setting it once.
  */
 const canonical = (
-  process.env.MARKDOWN_OFFICE_CANONICAL ?? "https://markdown-office.github.io/documentation"
+  process.env.MARKDOWN_OFFICE_CANONICAL ?? "https://markdown-office.github.io"
 ).replace(/\/+$/, "");
 
 /**

@@ -28,8 +28,8 @@ The watcher defaults to **8123**. Eleventy's own default is 8080, which is a pop
 the machine this was written on was already something else's — the failure that causes is an
 "address in use", and nothing about it points at the real problem. `PORT` overrides it.
 
-The watcher serves the site under the path the site is published under, so the address is
-<http://localhost:8123/documentation/> and not the root of the port.
+The watcher serves the site under the path the site is published under, which is the root of
+the port: the site is at the root of its host, so it is at the root here too.
 
 ## Why the examples are not screenshots
 
@@ -117,23 +117,25 @@ over the finished pages reaches both the prose blocks and the example sources.
 All four are generated from the sources, not from the rendered HTML — a `llms-full.txt` full of
 `<h2>` is not a Markdown file.
 
-Those are the site's own routes. The site is served under a path — `/documentation` for as
-long as it is on GitHub Pages — and the built files carry it: the addresses in `llms.txt` and
-`pages.json` are absolute, and the links inside the Markdown mirrors are the routes with that
-path in front of them.
+Those are the site's own routes. The site is served at the root of its host, so the built
+files carry no path in front of them: the addresses in `llms.txt` and `pages.json` are
+absolute, and the links inside the Markdown mirrors are the routes as they are written.
 
 ## Where it is published
 
 `.github/workflows/pages.yml` builds the site and publishes it to
-**<https://markdown-office.github.io/documentation/>**. A push to `main` deploys it; a pull
-request builds it and proves it is sound, without publishing it.
+**<https://markdown-office.github.io/>**. A push to `main` deploys it; a pull request builds
+it and proves it is sound, without publishing it.
 
 `MARKDOWN_OFFICE_CANONICAL` is the address the site is served from, path included, and it is
-the only setting there is. The path in it is the path the site is mounted under — a project
-site on GitHub Pages is served under the repository's name — so that one setting decides the
-canonical addresses, the links in the built pages, and the address the READMEs of the other
-repositories point at. Move the site to the root of a host and the setting loses its path, and
-the site is built for the root instead.
+the only setting there is. The path in it is the path the site is mounted under, so that one
+setting decides the canonical addresses, the links in the built pages, and the address the
+READMEs of the other repositories point at.
+
+The site is at the root of its host because the repository is named `markdown-office.github.io`:
+GitHub serves a repository of that name at the root of the organisation's site, and any other
+name under a path of its own. That is the same shape the site will have on its own domain, so
+the build does not change when the domain is pointed at GitHub — only the address does.
 
 The build checks its own links before it publishes:
 
