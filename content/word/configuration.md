@@ -1,10 +1,10 @@
 ---
 layout: layouts/base.njk
-permalink: /guides/configuration-word/
-title: Word configuration
+permalink: /word/configuration/
+title: Configuration
 summary: Every frontmatter key, every option, every style slot and its default — and the parser you have to pass to read any of it.
-section: Guides
-order: 0
+section: Markdown Word
+order: 2
 ---
 
 ## Read the frontmatter before anything else

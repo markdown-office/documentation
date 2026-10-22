@@ -448,6 +448,86 @@ img {
   line-height: 1.6;
 }
 
+/*
+ * The overlay a picture of a document opens in.
+ *
+ * The thumbnail is a link to the overlay's id, and the overlay is shown when it is the target of
+ * the page's fragment, so the whole of it is CSS: this site ships no script, and a picture that
+ * opens over the page does not need one. The browser's back button closes it, and so does the
+ * link in its corner.
+ *
+ * It is hidden rather than invisible, so a closed overlay is neither in the tab order nor read
+ * out by a screen reader.
+ */
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem 1.5rem;
+}
+
+.overlay:target {
+  display: flex;
+}
+
+/* The page does not scroll behind the overlay. */
+html:has(.overlay:target) {
+  overflow: hidden;
+}
+
+.overlay__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgb(15 23 42 / 84%);
+}
+
+.overlay__image {
+  position: relative;
+  max-width: 100%;
+  max-height: 100%;
+  border-radius: 6px;
+  box-shadow: 0 24px 64px rgb(15 23 42 / 45%);
+  background: #fff;
+}
+
+.overlay__close,
+.overlay__open {
+  position: absolute;
+  z-index: 1;
+  font: 12px/1.8 var(--mono);
+  text-decoration: none;
+  border-radius: 6px;
+  padding: 0 0.6rem;
+}
+
+.overlay__close {
+  top: 1rem;
+  right: 1rem;
+  color: var(--ink);
+  background: #fff;
+  border: 1px solid var(--line);
+}
+
+.overlay__close:hover {
+  color: var(--ink);
+  border-color: var(--blue);
+}
+
+.overlay__open {
+  bottom: 1rem;
+  left: 1rem;
+  color: #fff;
+  background: rgb(15 23 42 / 78%);
+}
+
+.overlay__open:hover {
+  color: #fff;
+  background: var(--blue);
+}
+
 .example__downloads {
   margin: 0;
   padding: 0.75rem 1rem;

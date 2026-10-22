@@ -3,9 +3,10 @@
 The documentation site for the Markdown Office suite. **Eleventy builds the pages; PHP builds the
 examples.**
 
-Every fenced block tagged `md word` or `md presentation` on a page is converted by the library it
-documents, and the page shows what came out — the `.docx` or `.pptx` to download, and either a
-picture of it or the text read back out of the built file.
+Every fenced block tagged with the direction it runs in — `md word`, `md presentation` or
+`word md` — is converted by the library it documents, and the page shows what came out: the
+`.docx` or `.pptx` to download, and either a picture of it or the text read back out of the built
+file.
 
 ## Build it
 
@@ -93,6 +94,23 @@ The tag is paired rather than a bare fence so the fence stays a fence for the Ma
 which matters on the pages that document this syntax themselves. The fence needs **four** backticks
 when the example itself contains a fenced block.
 
+The fence's tag says which way the example runs: the format it starts in, and the format it ends
+in. `md word` builds a Word document from Markdown, `md presentation` builds a deck, and
+`word md` reads a Word document back into Markdown. The body of the fence is the input — the
+Markdown for the first two, the path of the document for the last, relative to the site's own
+directory:
+
+````markdown
+{% example "A Word document read back to Markdown" %}
+```word md
+_documents/quarterly-report.docx
+```
+{% endexample %}
+````
+
+The direction decides what the download on the page says: a document the example built is its
+**output**, and a document it read is its **source**.
+
 The shortcode emits an HTML comment and the layout expands it. That is not indirection for its own
 sake: a shortcode's output goes back into the Markdown *before* markdown-it runs, so a shortcode
 returning `<figure>` has its own contents read as Markdown. An `**` in a sample heading becomes
@@ -158,16 +176,26 @@ to it, and the site is published at the GitHub Pages address until then.
 ## Layout
 
 ```text
-content/          the pages
+content/          the pages, one directory per chapter
 _includes/        the layout, the stylesheet, the wordmark
-tools/            render-examples.php, the two link checks, and lib/ — the PHP that builds the examples
+_documents/       the documents the examples read. Committed: an input must not change.
+tools/            render-examples.php, make-input-document.php, the two link checks, and lib/
 _examples/        built artifacts, published under the site's own path. Not committed.
 _data/            examples.json, written by the example builder. Not committed.
 _site/            the built site. Not committed.
 ```
 
-`tools/lib/` is four small classes and a three-line autoloader, not a Composer package: the site is
-built by Eleventy and this is the part it cannot do, so there is no autoloader to configure.
+`content/` is one directory per chapter: `word/`, `presentation/`, `general/`, `command-line/` and
+`suite/`. A page's `section` says which chapter it is in and its `order` says where in it, and the
+menu and the pager both read those two keys — the menu sorts by them rather than by the order the
+files happen to be read in.
+
+`tools/lib/` is a handful of small classes and an autoloader of their own, not a Composer package:
+the site is built by Eleventy and this is the part it cannot do, so there is no autoloader to
+configure.
+
+`tools/make-input-document.php` writes the document in `_documents/`. It is run by hand, and its
+result is committed: see `_documents/README.md` for why an input must not be built.
 
 ## Why there is no HTTP endpoint
 
@@ -183,9 +211,16 @@ built as one, with its own reasons.
 
 ## When there are no preview images
 
-A page image needs LibreOffice, and a build machine may not have a working one. The build probes
-once and **degrades rather than hanging**: every command has a deadline, because a crashed
-`soffice` leaves a process that never exits and `proc_close()` waits for that forever.
+A page image needs a renderer, and a build machine may not have one. A Word document is drawn by
+[WordCraft](https://github.com/storytold/wordcraft) and a deck by
+[DeckCraft](https://github.com/storytold/deckcraft) — both are looked for on the path as
+`wordcraft-cli` and `deckcraft-cli` — and the build **degrades rather than hanging** when they
+are missing: every command has a deadline, and a document it cannot draw gets no picture rather
+than a failed build.
+
+The published site has the pictures: the workflow installs both tools before it builds, so the
+images are drawn on the machine that publishes the pages rather than on the one that wrote them.
+The fonts the tools draw with ship with them, so a document looks the same wherever it is drawn.
 
 With no picture, each example shows its document's text read back out of the built `.docx` or
 `.pptx` — read from the artifact rather than from the Markdown that produced it, so it is evidence

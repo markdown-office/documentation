@@ -1,9 +1,8 @@
 ---
 layout: layouts/base.njk
-permalink: /suite/spreadsheet/
+permalink: /suite/
 title: The suite
 summary: Three packages with no facade between them, one command line over the two
-  converters, and a fourth package on the way.
 section: The suite
 order: 0
 ---
@@ -39,7 +38,7 @@ mdoffice word notes.md      # → notes.docx
 mdoffice slides deck.md     # → deck.pptx
 ```
 
-The command line is documented in full under [The command line](/guides/command-line/).
+The command line is documented in full under [The command line](/command-line/basic/).
 
 ## The three
 
@@ -53,8 +52,8 @@ The command line is documented in full under [The command line](/guides/command-
 
 | Package | What it is |
 | --- | --- |
-| [`markdown-office/markdown-word`](/directives/word/) | Markdown to `.docx`, `.odt` and `.rtf`, and `.docx` back to Markdown |
-| [`markdown-office/markdown-presentation`](/directives/presentation/) | Markdown to `.pptx`, with a Slidev-compatible splitter |
+| [`markdown-office/markdown-word`](/word/directives/) | Markdown to `.docx`, `.odt` and `.rtf`, and `.docx` back to Markdown |
+| [`markdown-office/markdown-presentation`](/presentation/directives/) | Markdown to `.pptx`, with a Slidev-compatible splitter |
 | [`markdown-office/commonmark-generic-directives`](/directives/syntax/) | the directive syntax, for your own parser if you want one |
 
 Both converters require the directives package at the same constraint, `^0.2.0`, and both use it
@@ -87,7 +86,7 @@ library actually produced.
 Installing both means the intersection of their `symfony/yaml` constraints: `^7.4 || ^8.0`. A
 project on 7.2 or 7.3 cannot install the pair together.
 
-`ext-imagick` is in `suggest` for both, and buys SVG. See [Images](/guides/images/).
+`ext-imagick` is in `suggest` for both, and buys SVG. See [Images](/images/).
 
 The presentation package pins `phpoffice/phppresentation` to a **commit on `dev-master`**, not a
 tag, because the fixes it needs are not in a release. That is why `composer validate` runs without

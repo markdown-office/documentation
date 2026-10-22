@@ -48,11 +48,10 @@ const pathPrefix = mountPath(canonical);
  * nobody will find and dropping it would hide the mistake rather than fix it.
  */
 const SECTIONS = [
-  ["Markdown Word", "The dialect, the command line, and the library."],
-  ["Markdown Presentation", "The dialect, and the library."],
-  ["Directives", "The one syntax both read, and what each draws."],
-  ["Guides", "The parts a reader needs once the first file worked."],
-  ["Reference", "Every key, every value, every error."],
+  ["Markdown Word", "The dialect, the directives, the configuration, and the errors."],
+  ["Markdown Presentation", "The dialect, the directives, the themes, and the errors."],
+  ["In general", "The parts that are about both libraries."],
+  ["The command line", "One command over both of them."],
   ["The suite", "The other packages, and where this is going."],
 ];
 
@@ -174,23 +173,29 @@ function example(content, ...args) {
  * inserted as-is rather than parsed, and the only thing to escape is what came out of a document.
  */
 function expandExamples(html) {
+  const shown = new Map();
+
   return String(html ?? "").replace(
     /<!--mo-example:([0-9a-f]{16}):([A-Za-z0-9+/=]*)-->/g,
-    (_, hash, encoded) => render(hash, Buffer.from(encoded, "base64").toString("utf8")),
+    (_, hash, encoded) => {
+      const occurrence = (shown.get(hash) ?? 0) + 1;
+
+      shown.set(hash, occurrence);
+
+      return render(hash, Buffer.from(encoded, "base64").toString("utf8"), occurrence);
+    },
   );
 }
 
-function render(hash, title) {
+function render(hash, title, occurrence) {
   const built = examples[hash];
   const source = built?.source ?? "";
-  const language = source.match(/^`{3,}md[ \t]+(word|presentation)/m)?.[1] ?? "";
 
   if (!built) {
     return [
       '<figure class="example example--missing">',
       '<p class="example__failure"><strong>No build was found for this example.</strong>',
-      "Run <code>npm run examples</code> to build it",
-      language ? ` — it is tagged <code>md ${escape(language)}</code>.` : ".",
+      "Run <code>npm run examples</code> to build it.",
       "</p></figure>",
     ].join("");
   }
@@ -200,35 +205,55 @@ function render(hash, title) {
       `<figure class="example example--failed" data-language="${escape(built.language)}">`,
       head(built, title),
       `<p class="example__failure"><strong>This example did not build.</strong> ${escape(built.failure)}</p>`,
-      sourceOf(source),
+      sourceOf(source, built),
       "</figure>",
     ].join("");
   }
 
   const previews = (built.previews ?? [])
-    .map(
-      (href, index) =>
-        `<a class="example__page" href="${escape(href)}" target="_blank" rel="noopener">` +
-        `<img src="${escape(href)}" alt="${escape(title || built.name)}, page ${index + 1}"` +
+    .map((href, index) => {
+      const label = `${title || built.name}, page ${index + 1}`;
+      const id = `example-${hash}-${occurrence}-page-${index + 1}`;
+
+      // The thumbnail opens the picture over the page rather than in a new tab, and it opens
+      // it with CSS alone: the link points at the overlay's id, and the overlay is shown when
+      // it is the target of the page's fragment. The browser's back button closes it again,
+      // and so does the link in its corner.
+      //
+      // The picture is offered on its own as well, because a reader who wants the file is
+      // not served by a picture of it.
+      return (
+        `<a class="example__page" href="#${id}">` +
+        `<img src="${escape(href)}" alt="${escape(label)}"` +
         ` loading="lazy" decoding="async">` +
-        `<span class="example__page-no">${index + 1}</span></a>`,
-    )
+        `<span class="example__page-no">${index + 1}</span></a>` +
+        `<div class="overlay" id="${id}">` +
+        `<a class="overlay__backdrop" href="#example-${hash}-${occurrence}" tabindex="-1" aria-hidden="true"></a>` +
+        `<img class="overlay__image" src="${escape(href)}" alt="${escape(label)}">` +
+        `<a class="overlay__open" href="${escape(href)}" target="_blank" rel="noopener">Open the image</a>` +
+        `<a class="overlay__close" href="#example-${hash}-${occurrence}">Close</a>` +
+        `</div>`
+      );
+    })
     .join("");
 
   const body = previews
     ? `<div class="example__pages">${previews}</div>${downloads(built)}`
     : [
         '<p class="example__notice">This example built. It has no preview image, because the machine ',
-        'that built this page had no LibreOffice to render one with. What follows is read back ',
-        'out of the document it produced.</p>',
+        'that built this page had no WordCraft or DeckCraft to draw it with. What follows is ',
+        built.role === "source"
+          ? "the text of the document it read."
+          : "read back out of the document it produced.",
+        "</p>",
         outline(built),
         downloads(built),
       ].join("");
 
   return [
-    `<figure class="example" data-language="${escape(built.language)}">`,
+    `<figure class="example" id="example-${hash}-${occurrence}" data-language="${escape(built.language)}">`,
     head(built, title),
-    sourceOf(source),
+    sourceOf(source, built),
     body,
     "</figure>",
   ].join("");
@@ -237,7 +262,7 @@ function render(hash, title) {
 /**
  * The document's own text, as read out of the built file.
  *
- * The fallback for a machine with no LibreOffice, and a better one than a page of downloads with
+ * The fallback for a machine with no renderer, and a better one than a page of downloads with
  * nothing under them: this is read from the artifact rather than from the Markdown that produced
  * it, so a converter that dropped something shows up here as something missing.
  */
@@ -267,17 +292,22 @@ function head(built, title) {
     '<figcaption class="example__head">' +
     `<span class="example__badge">${built.language === "presentation" ? "PowerPoint" : "Word"}</span>` +
     `<span class="example__name">${escape(title || built.name)}</span>` +
-    '<span class="example__made">built by the library this page documents</span>' +
+    `<span class="example__made">${built.role === "source" ? "read" : "built"} by the library this page documents</span>` +
     "</figcaption>"
   );
 }
 
-function sourceOf(source) {
+function sourceOf(source, built) {
   // Open, not folded. A reader came to this page for the Markdown, and the document below is
   // what proves it — so the Markdown is the first thing in the figure rather than a disclosure
   // under a summary they have to guess is there.
+  //
+  // The summary says which Markdown it is, because an example that reads a document shows the
+  // Markdown that came out of it rather than the one that went in.
   return (
-    '<details class="example__source" open><summary>The Markdown</summary>' +
+    `<details class="example__source" open><summary>${
+      built?.role === "source" ? "The Markdown it reads back as" : "The Markdown"
+    }</summary>` +
     `<pre><code class="language-markdown">${escape(source)}</code></pre></details>`
   );
 }
@@ -290,8 +320,10 @@ function downloads(built) {
       download(
         built.document,
         built.document.split("/").pop(),
-        "The document this example built, editable in Word, LibreOffice or Google Docs",
-        "source",
+        built.role === "source"
+          ? "The document this example read, editable in Word, LibreOffice or Google Docs"
+          : "The document this example built, editable in Word, LibreOffice or Google Docs",
+        built.role,
       ),
     );
   }
@@ -553,15 +585,20 @@ function sectionGroups(entries) {
   // `collections.all | sections` passes the array, not the object that holds it.
   const pages = (entries ?? []).filter((entry) => entry.url !== "/" && entry.data?.section);
 
+  // The order the pages are in is the one they declare, not the order the collection happens to
+  // hold them in: a menu that lists its chapters in the order the files were written is a menu
+  // that reorders itself when a page is edited.
+  const byOrder = (a, b) => a.data.order - b.data.order || a.data.title.localeCompare(b.data.title);
+
   const known = SECTIONS.map(([title, note]) => ({
     title,
     note,
-    pages: pages.filter((entry) => entry.data.section === title),
+    pages: pages.filter((entry) => entry.data.section === title).sort(byOrder),
   })).filter((group) => group.pages.length > 0);
 
-  const elsewhere = pages.filter(
-    (entry) => !SECTIONS.some(([title]) => title === entry.data.section),
-  );
+  const elsewhere = pages
+    .filter((entry) => !SECTIONS.some(([title]) => title === entry.data.section))
+    .sort(byOrder);
 
   return elsewhere.length
     ? [

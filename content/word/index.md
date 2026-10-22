@@ -216,7 +216,7 @@ rather than parsed as Markdown. There are no attributes.
 opposite of the presentation half's policy, and deliberate — a parser nobody asked to change
 should not change the syntax of every document converted after it.
 
-More, including what a `:::toc` container does: [Word directives](/directives/word/).
+More, including what a `:::toc` container does: [Word directives](/word/directives/).
 
 ---
 
@@ -271,7 +271,7 @@ alone because it is the caller's mistake to fix. A defect is a different thing, 
 with its class and the line it happened on.
 
 More, including the other half, the downloads and the error messages:
-[The command line](/guides/command-line/).
+[The command line](/command-line/basic/).
 
 ## 3. As a library
 
@@ -339,7 +339,7 @@ Both directions implement `MarkdownWord\Converter`, whose whole surface is `conv
 `save()`. The constructor takes a path **or** the bytes.
 
 For standard Markdown the round trip is close to lossless. Directives are the exception and are
-written down rather than glossed over — see [Round trips](/guides/round-trip/).
+written down rather than glossed over — see [Round trips](/word/round-trip/).
 
 ### What you can ask the converter
 
@@ -370,12 +370,12 @@ try {
 }
 ```
 
-The whole catalogue is on [Errors](/reference/errors/).
+The whole catalogue is on [Errors](/word/errors/).
 
 ---
 
 ## Next
 
 [Markdown Presentation](/presentation/) · [The directive syntax](/directives/syntax/) ·
-[Word directives](/directives/word/) · [Images](/guides/images/) ·
-[Round trips](/guides/round-trip/) · [Errors](/reference/errors/)
+[Word directives](/word/directives/) · [Images](/images/) ·
+[Round trips](/word/round-trip/) · [Errors](/word/errors/)

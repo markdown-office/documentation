@@ -1,10 +1,10 @@
 ---
 layout: layouts/base.njk
-permalink: /guides/round-trip/
+permalink: /word/round-trip/
 title: Round trips
 summary: Markdown to a document and back. What comes out the same, and the five things that do not.
-section: Guides
-order: 2
+section: Markdown Word
+order: 3
 ---
 
 Both directions are the same interface, so a round trip is two calls:
@@ -26,22 +26,19 @@ convert(new WordToMarkdown('notes.docx'), 'notes.md');
 ## What survives
 
 For **standard Markdown** — headings, emphasis, inline code, links, lists, block quotes and tables
-— it is close to lossless, and it is worth trying before you assume otherwise:
+— it is close to lossless, and it is worth trying before you assume otherwise.
 
-```markdown
-# Title
+Here is a Word document, and the Markdown the reader makes of it. The document is a real file
+rather than a picture of one, and it can be downloaded and opened:
 
-Some **bold** and `code`.
-
-- one
-- two
-
-| A | B |
-| - | - |
-| 1 | 2 |
+{% example "A Word document read back to Markdown" %}
+```word md
+_documents/quarterly-report.docx
 ```
+{% endexample %}
 
-comes back as the same document, with the two changes below.
+The headings, the emphasis, the inline code, the link, the table, the list, the quote and the
+code block all came back. What follows is what did not.
 
 ## Directives do not come back
 
@@ -58,7 +55,7 @@ the field's content and finds a sentence.
 
 The second round trips only by accident: `:footnote[…]` does not currently produce a
 `footnotes.xml` at all, so what the reader finds is the source text that was always in the body.
-See [Word directives](/directives/word/).
+See [Word directives](/word/directives/).
 
 **Neither is a round trip you should build on.** A pipeline that edits documents in Word and reads
 them back should treat directives as one-way.

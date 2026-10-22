@@ -1,15 +1,18 @@
 ---
 layout: layouts/base.njk
-permalink: /guides/command-line/
-title: The command line
-summary: mdoffice in full — the parts, every command, every option, and how it decides which way the data has to go.
-section: Reference
+permalink: /command-line/basic/
+title: Basic use
+summary: The parts, every command, the exit codes, the pipes, and how it decides which way the data has to go.
+section: The command line
 order: 1
 ---
 
 `mdoffice` is the whole suite at a terminal. It is a program in its own right,
 [`markdown-office/mdoffice`](https://github.com/markdown-office/mdoffice), which requires both
 converter packages and calls them — so what it does is what those libraries do.
+
+The options of each half are on a page of their own: [For word](/command-line/word/) and [For
+presentations](/command-line/presentations/). How to get the tool is on [Installation](/command-line/installation/).
 
 ```bash
 mdoffice word README.md          # writes README.docx
@@ -85,68 +88,6 @@ mdoffice word to-docx --help
 mdoffice slides to-pptx --help
 ```
 
-## Options for `to-docx`, `to-odt` and `to-rtf`
-
-| Option | Value | Default |
-| --- | --- | --- |
-| `-o, --output <file>` | path | beside the input; `-` for standard output |
-| `-c, --config <file.php>` | path | none |
-| `--theme <name>` | name or path | the frontmatter's `theme:` |
-| `-t, --template <file>` | `.docx` or `.dotx` | none |
-| `--require-control` | flag | off |
-| `--images <mode>` | `embed`, `placeholder`, `skip` | `embed` |
-| `--no-images` | flag | shorthand for `--images skip` |
-| `--image-base <dir>` | path | the input's directory; the working directory for standard input |
-| `--svg-fallback <mode>` | `raster`, `none` | `raster` |
-| `--table-width <n>` | fiftieths of a percent; 0–5000 | `5000`, the full width; `0` leaves the width to Word |
-| `--plain` | flag | off |
-| `--to <format>` | `docx`, `word` for `to-docx`; `odt` for `to-odt`; `rtf` for `to-rtf` | the command names the direction |
-| `-h, --help` | flag | off |
-
-`--plain` is the fastest thing to try: no code colouring, no quote style, no table borders, no
-added spacing.
-
-Only `to-docx` takes `--template`. The others answer:
-
-```text
-mdoffice word: A template cannot be filled in for odt.
-mdoffice word:   A template is a .docx or .dotx, and only `mdoffice word to-docx` renders into one.
-```
-
-A document that names its own template does so with `template_file:` in its frontmatter, and that
-is read whichever of the three formats the document is converted to — so a document with a
-`template_file:` is refused for `.odt` and `.rtf` in the same words. `--template` outranks the
-frontmatter.
-
-## Options for `to-markdown`
-
-| Option | Value | Default |
-| --- | --- | --- |
-| `-o, --output <file>` | path | beside the input, `.md` |
-| `--media <dir>` | path | no extraction |
-| `--line-ending <lf\|crlf>` | `lf`, `crlf` | `lf` |
-| `--setext` | flag | off — headings are written as `# Heading` |
-| `--no-fence` | flag | off — a monospaced paragraph comes back as a fenced code block |
-| `--no-header` | flag | off — the first row of a table is a header row |
-| `--to <format>` | `markdown`, `md` | the command names the direction |
-| `-h, --help` | flag | off |
-
-A line ending may also be written `unix`, `n`, `dos`, `windows` or `r`.
-
-## Options for `to-pptx`
-
-| Option | Value | Default |
-| --- | --- | --- |
-| `-o, --output <file>` | path | beside the input; `-` for standard output |
-| `--strict` | flag | off — a deck that does not fit is shrunk to fit |
-| `--image-base <path>` | path; may be repeated | the deck's own directory |
-| `-h, --help` | flag | off |
-
-A deck is read with the Slidev-compatible dialect, so a `---` line closes the slide being read
-and `---` on its own opens the frontmatter block.
-
-There is no `--theme`: the renderer resolves the theme from the deck's own `theme:`.
-
 ## Exit codes
 
 `0` on success, and `1` for anything that did not finish — whether the cause is a mistake the
@@ -203,31 +144,6 @@ mdoffice word: odt cannot carry table-borders: a table comes out with no borders
 The Word half reports what a target format cannot carry. The slides half reports what it had to
 shrink to make fit — a block that is clamped rather than drawn over whatever comes next, so the
 file itself says nothing about it.
-
-## Getting it
-
-There is no release to download yet: the repository has no tag, the releases page is empty, and
-there is no Homebrew or winget package. The tool is run from a checkout, and the checkout needs
-its two siblings beside it, because the manifest resolves both libraries through `path`
-repositories pointing at `../markdown-word` and `../markdown-presentation`.
-
-```bash
-git clone https://github.com/markdown-office/mdoffice.git
-git clone https://github.com/markdown-office/markdown-word.git
-git clone https://github.com/markdown-office/markdown-presentation.git
-cd mdoffice && composer install
-
-php bin/mdoffice word notes.md
-```
-
-A PHAR is one command away, and it carries the two libraries inside it. The build rewrites the
-two `path` repositories as `vcs` and resolves the libraries from GitHub, so the archive is one
-file that needs nothing beside it:
-
-```bash
-composer build:phar          # build/mdoffice.phar
-php build/mdoffice.phar word notes.md
-```
 
 ## `--version`, and which library produced the document
 

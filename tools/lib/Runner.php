@@ -9,17 +9,23 @@ use League\CommonMark\Extension\GithubFlavoredMarkdownExtension;
 use MarkdownOffice\CommonMark\Directive\GenericDirectiveExtension;
 use MarkdownWord\MarkdownToWord;
 use MarkdownWord\Parser\CommonMarkParser;
+use MarkdownWord\WordToMarkdown;
 use MarkdownPresentation\Document\DeckParser;
 use MarkdownPresentation\Render\PresentationRenderer;
 
 /**
  * Runs a page's example through the library it documents, and keeps what came out.
  *
- * Caching is by content hash rather than by page or by position, so the second page to show the
- * same example pays nothing, a build that changes one paragraph re-renders one example, and a
- * build that changes none re-renders none. The cost that matters is LibreOffice — several
- * seconds a document — so this is the difference between a ten-second build and a five-minute
- * one on an unchanged tree.
+ * An example names a direction rather than a renderer: `md word` builds a document from
+ * Markdown, `word md` reads a document back into Markdown, and the document in the second
+ * case is the example's input rather than its output. The direction decides what is built,
+ * which library draws it, and what the download on the page says about it.
+ *
+ * Caching is by content hash rather than by page or by position, so the second page to show
+ * the same example pays nothing, a build that changes one paragraph re-renders one example, and
+ * a build that changes none re-renders none. The cost that matters is the drawing: laying a
+ * document out and writing its PDF is the slowest thing a build does, and doing it again for an
+ * example nobody changed is time nobody asked for.
  *
  * Artifacts are written under the site's own root, which is why the URLs handed back are
  * relative to the site: the build cleans its output by deleting one directory, and there is no
@@ -27,28 +33,49 @@ use MarkdownPresentation\Render\PresentationRenderer;
  */
 final class Runner
 {
-    public const LANGUAGES = ['word', 'presentation'];
+    /** Markdown into a Word document. */
+    public const MD_WORD = 'md-word';
+
+    /** Markdown into a PowerPoint deck. */
+    public const MD_PRESENTATION = 'md-presentation';
+
+    /** A Word document back into Markdown. */
+    public const WORD_MD = 'word-md';
+
+    /**
+     * The directions the site builds, and the library each belongs to.
+     *
+     * The key is the pair a fence tag names, with the two formats separated by a dash: the
+     * format the example starts in, and the format it ends in.
+     */
+    public const DIRECTIONS = [
+        self::MD_WORD => 'word',
+        self::MD_PRESENTATION => 'presentation',
+        self::WORD_MD => 'word',
+    ];
+
+    /** The document an example offers is what it produced. */
+    public const ROLE_OUTPUT = 'output';
+
+    /** The document an example offers is what it read. */
+    public const ROLE_SOURCE = 'source';
+
+    /** The file the cache is described by. */
+    private const MANIFEST = '/manifest.json';
+
+    /** The Markdown the page shows for an example: what it ran on, or what it read back. */
+    private const MARKDOWN = '/example.md';
 
     private int $rendered = 0;
     private int $reused = 0;
-
-    /** @var list<string> */
-    private array $failures = [];
 
     public function __construct(
         private readonly string $root,
         private readonly string $prefix,
         private readonly Preview $preview,
+        private readonly string $site,
         private readonly Outline $outline = new Outline(),
     ) {}
-
-    /**
-     * @return list<string> the message from every example that would not build.
-     */
-    public function failures(): array
-    {
-        return $this->failures;
-    }
 
     /**
      * @return array{rendered: int, reused: int}
@@ -69,17 +96,22 @@ final class Runner
      * keeps its artifacts in `_examples/` and Eleventy copies that to `/examples` in the site,
      * and neither half has to know where the other put its files.
      */
-    public function run(string $language, string $slug, string $name, string $source): Example
+    public function run(string $direction, string $slug, string $name, string $source): Example
     {
+        $language = self::DIRECTIONS[$direction] ?? 'word';
+        $role = $direction === self::WORD_MD ? self::ROLE_SOURCE : self::ROLE_OUTPUT;
         $cache = \sprintf('%s/%s/%s', $this->root, $language, $slug);
         $url = \sprintf('%s/%s/%s', $this->prefix, $language, $slug);
-        $sourceFile = $cache . '/example.md';
-        $manifest = $cache . '/manifest.json';
+        $fingerprint = $this->fingerprint($direction, $source);
 
-        if (\is_file($sourceFile) && \file_get_contents($sourceFile) === $source && \is_file($manifest)) {
-            $this->reused++;
+        if (\is_file($cache . self::MANIFEST) && \is_file($cache . self::MARKDOWN)) {
+            $read = (array) \json_decode((string) \file_get_contents($cache . self::MANIFEST), true);
 
-            return $this->read($language, $url, $name, $cache);
+            if (($read['input'] ?? null) === $fingerprint) {
+                $this->reused++;
+
+                return $this->read($language, $role, $name, $cache, $read);
+            }
         }
 
         foreach (\glob($cache . '/*') ?: [] as $stale) {
@@ -87,12 +119,9 @@ final class Runner
         }
 
         @\mkdir($cache, 0o777, true);
-        \file_put_contents($sourceFile, $source);
 
         try {
-            $document = $language === 'word'
-                ? $this->word($source, $cache . '/example.docx')
-                : $this->presentation($source, $cache . '/example.pptx');
+            $built = $this->build($direction, $source, $cache);
         } catch (\Throwable $error) {
             $message = \sprintf(
                 'The %s example "%s" did not build: %s',
@@ -101,13 +130,15 @@ final class Runner
                 $this->oneLine($error->getMessage()),
             );
 
-            $this->failures[] = $message;
-            $this->manifest($cache, failure: $message);
+            $this->manifest($cache, input: $fingerprint, failure: $message);
+            \file_put_contents($cache . self::MARKDOWN, $source);
 
-            return new Example($language, $source, $name, failure: $message);
+            return new Example($language, $role, $source, $name, failure: $message);
         }
 
-        $rendered = $this->preview->pagesOf($document);
+        \file_put_contents($cache . self::MARKDOWN, $built['markdown']);
+
+        $rendered = $this->preview->pagesOf($built['document']);
         $previews = [];
 
         foreach ($rendered['pages'] as $page) {
@@ -118,17 +149,18 @@ final class Runner
             }
         }
 
-        $pdf = $rendered['pdf'] === '' ? null : $url . '/' . \pathinfo($document, \PATHINFO_FILENAME) . '.pdf';
+        $pdf = $rendered['pdf'] === '' ? null : $url . '/' . \pathinfo($built['document'], \PATHINFO_FILENAME) . '.pdf';
 
         // What is in the document, read back out of it. Shown when there is no page image to
-        // show, and built either way so a machine that gains LibreOffice later does not have to
+        // show, and built either way so a machine that gains a renderer later does not have to
         // rebuild every example to get them.
-        $contents = $this->outline->of($document);
+        $contents = $this->outline->of($built['document']);
 
         $this->rendered++;
         $this->manifest(
             $cache,
-            document: $url . '/' . \basename($document),
+            input: $fingerprint,
+            document: $url . '/' . \basename($built['document']),
             pdf: $pdf,
             previews: $previews,
             contents: $contents,
@@ -136,9 +168,10 @@ final class Runner
 
         return new Example(
             $language,
-            $source,
+            $role,
+            $built['markdown'],
             $name,
-            $url . '/' . \basename($document),
+            $url . '/' . \basename($built['document']),
             $pdf,
             $previews,
             contents: $contents,
@@ -146,11 +179,95 @@ final class Runner
     }
 
     /**
+     * The document an example works with, and the Markdown the page shows for it.
+     *
+     * A direction that builds a document gets the Markdown it was given back. A direction that
+     * reads one gets the Markdown the reader made of it — which is the point of that example,
+     * and the reason its document is the input rather than the output.
+     *
+     * @return array{document: string, markdown: string}
+     */
+    private function build(string $direction, string $source, string $cache): array
+    {
+        if ($direction === self::WORD_MD) {
+            $document = $cache . '/example.docx';
+
+            \copy($this->document($source), $document);
+
+            try {
+                $markdown = (new WordToMarkdown($document))->convert();
+            } catch (\Throwable $error) {
+                // The library names the file it could not read, and that file is inside the
+                // build's own directory. The page says what went wrong in terms the reader can
+                // act on, which is the path the fence named.
+                throw new UnreadableDocument(
+                    \str_replace($document, $source, $error->getMessage()),
+                    0,
+                    $error,
+                );
+            }
+
+            return ['document' => $document, 'markdown' => $markdown];
+        }
+
+        $document = $cache . '/example.' . (self::DIRECTIONS[$direction] === 'presentation' ? 'pptx' : 'docx');
+
+        return [
+            'document' => $direction === self::MD_PRESENTATION
+                ? $this->presentation($source, $document)
+                : $this->word($source, $document),
+            'markdown' => $source,
+        ];
+    }
+
+    /**
+     * The document a fence names, as a path on this machine.
+     *
+     * The path in the fence is relative to the site's own directory, and it is resolved rather
+     * than opened: a fence is a page's own text, and a page that named a path outside the site
+     * would have the build copy a file from elsewhere onto the published site.
+     */
+    private function document(string $source): string
+    {
+        $site = \realpath($this->site);
+        $path = \realpath($this->site . '/' . $source);
+
+        if ($path === false || $site === false) {
+            throw new UnreadableDocument(\sprintf('There is no document at "%s".', $source));
+        }
+
+        if (! \str_starts_with($path, $site . \DIRECTORY_SEPARATOR)) {
+            throw new UnreadableDocument(\sprintf('The document "%s" is not inside the site.', $source));
+        }
+
+        return $path;
+    }
+
+    /**
+     * What an example's input was, in a form that changes when the input does.
+     *
+     * The Markdown is the input for the directions that build a document from it. For the
+     * direction that reads one, the document's own bytes are the input: the path is already
+     * part of the example's hash, and a document that changed under the same name has to
+     * rebuild rather than be served from the cache.
+     */
+    private function fingerprint(string $direction, string $source): string
+    {
+        if ($direction !== self::WORD_MD) {
+            return $source;
+        }
+
+        $path = \realpath($this->site . '/' . $source);
+
+        return $path === false ? $source : $source . "\0" . (string) \hash_file('sha256', $path);
+    }
+
+    /**
      * Builds a `.docx` at `$target` and answers with that path.
      *
      * `convertTo()` answers with the document's bytes rather than with where it put them, which
      * is the right answer for a caller holding the result in memory and the wrong one here: the
-     * next thing this does is hand a path to LibreOffice.
+     * next thing this does is hand a path to the tool that draws it.
      *
      * The parser is passed rather than left to the default, because the default does not read
      * frontmatter. `CommonMarkParser::DEFAULT_FLAVOUR` is GitHub-Flavored Markdown plus directives,
@@ -187,18 +304,24 @@ final class Runner
      * The manifest is the record the last run wrote, not something re-derived from the files: a
      * cached example has to come back as exactly the set of files it was last time, or the cache
      * is not describing anything and the next build cannot trust it either.
+     *
+     * Every field the manifest records goes into the constructor, in its order. Adding one and
+     * not passing it here is silent: the first build is right and every build after it drops the
+     * field, which is how an example loses its document outline without anything failing.
+     *
+     * @param array{document?: ?string, pdf?: ?string, previews?: list<string>, failure?: ?string, contents?: list<array{part: string, heading: string, lines: list<string>}>} $read
      */
-    private function read(string $language, string $url, string $name, string $cache): Example
-    {
-        /** @var array{document?: ?string, pdf?: ?string, previews?: list<string>, failure?: ?string} $read */
-        $read = (array) \json_decode((string) \file_get_contents($cache . '/manifest.json'), true);
-
-        // Every field the manifest records, in the constructor's order. Adding one and not
-        // passing it here is silent: the first build is right and every build after it drops
-        // the field, which is how an example loses its document outline without anything failing.
+    private function read(
+        string $language,
+        string $role,
+        string $name,
+        string $cache,
+        array $read,
+    ): Example {
         return new Example(
             $language,
-            (string) \file_get_contents($cache . '/example.md'),
+            $role,
+            (string) \file_get_contents($cache . self::MARKDOWN),
             $name,
             $read['document'] ?? null,
             $read['pdf'] ?? null,
@@ -210,13 +333,11 @@ final class Runner
 
     /**
      * @param list<string> $previews
-     */
-    /**
-     * @param list<string> $previews
      * @param list<array{part: string, heading: string, lines: list<string>}> $contents
      */
     private function manifest(
         string $cache,
+        ?string $input = null,
         ?string $document = null,
         ?string $pdf = null,
         array $previews = [],
@@ -224,9 +345,10 @@ final class Runner
         array $contents = [],
     ): void {
         \file_put_contents(
-            $cache . '/manifest.json',
+            $cache . self::MANIFEST,
             (string) \json_encode(
                 [
+                    'input' => $input,
                     'document' => $document,
                     'pdf' => $pdf,
                     'previews' => $previews,

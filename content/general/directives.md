@@ -3,7 +3,7 @@ layout: layouts/base.njk
 permalink: /directives/
 title: How directives work
 summary: One syntax, three shapes, and what each half of the suite does with a name it recognises — and with one it does not.
-section: Directives
+section: In general
 order: 0
 ---
 
@@ -38,8 +38,8 @@ thing on it is worse than a deck that did not build.
 
 Both then agree on one thing: an unrecognised directive is never silently dropped.
 
-- [Word directives](/directives/word/) — `::toc`, `:footnote`, and the rest rendered as text.
-- [Presentation directives](/directives/presentation/) — `::click`, `:::click`, `::column`,
+- [Word directives](/word/directives/) — `::toc`, `:footnote`, and the rest rendered as text.
+- [Presentation directives](/presentation/directives/) — `::click`, `:::click`, `::column`,
   `::note`, and the refusals.
 - [The syntax itself](/directives/syntax/) — every rule, including the ones that surprise people.
 
