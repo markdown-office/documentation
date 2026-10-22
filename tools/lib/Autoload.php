@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace MarkdownOffice\Documentation\Tool;
 
 /**
- * A three-line autoloader for the four classes in this directory.
+ * An autoloader for the classes in this directory.
  *
  * The documentation site is built by Eleventy and this is the part it cannot do, so there is no
  * Composer package here and no autoloader to configure — just a namespace, a directory, and the

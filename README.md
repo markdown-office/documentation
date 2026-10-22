@@ -185,8 +185,9 @@ _data/            examples.json, written by the example builder. Not committed.
 _site/            the built site. Not committed.
 ```
 
-`tools/lib/` is four small classes and a three-line autoloader, not a Composer package: the site is
-built by Eleventy and this is the part it cannot do, so there is no autoloader to configure.
+`tools/lib/` is a handful of small classes and an autoloader of their own, not a Composer package:
+the site is built by Eleventy and this is the part it cannot do, so there is no autoloader to
+configure.
 
 `tools/make-input-document.php` writes the document in `_documents/`. It is run by hand, and its
 result is committed: see `_documents/README.md` for why an input must not be built.

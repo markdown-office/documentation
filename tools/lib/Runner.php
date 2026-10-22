@@ -60,6 +60,12 @@ final class Runner
     /** The document an example offers is what it read. */
     public const ROLE_SOURCE = 'source';
 
+    /** The file the cache is described by. */
+    private const MANIFEST = '/manifest.json';
+
+    /** The Markdown the page shows for an example: what it ran on, or what it read back. */
+    private const MARKDOWN = '/example.md';
+
     private int $rendered = 0;
     private int $reused = 0;
 
@@ -98,13 +104,13 @@ final class Runner
         $url = \sprintf('%s/%s/%s', $this->prefix, $language, $slug);
         $fingerprint = $this->fingerprint($direction, $source);
 
-        if (\is_file($cache . '/manifest.json') && \is_file($cache . '/example.md')) {
-            $read = (array) \json_decode((string) \file_get_contents($cache . '/manifest.json'), true);
+        if (\is_file($cache . self::MANIFEST) && \is_file($cache . self::MARKDOWN)) {
+            $read = (array) \json_decode((string) \file_get_contents($cache . self::MANIFEST), true);
 
             if (($read['input'] ?? null) === $fingerprint) {
                 $this->reused++;
 
-                return $this->read($language, $role, $url, $name, $cache, $read);
+                return $this->read($language, $role, $name, $cache, $read);
             }
         }
 
@@ -125,12 +131,12 @@ final class Runner
             );
 
             $this->manifest($cache, input: $fingerprint, failure: $message);
-            \file_put_contents($cache . '/example.md', $source);
+            \file_put_contents($cache . self::MARKDOWN, $source);
 
             return new Example($language, $role, $source, $name, failure: $message);
         }
 
-        \file_put_contents($cache . '/example.md', $built['markdown']);
+        \file_put_contents($cache . self::MARKDOWN, $built['markdown']);
 
         $rendered = $this->preview->pagesOf($built['document']);
         $previews = [];
@@ -194,7 +200,7 @@ final class Runner
                 // The library names the file it could not read, and that file is inside the
                 // build's own directory. The page says what went wrong in terms the reader can
                 // act on, which is the path the fence named.
-                throw new \RuntimeException(
+                throw new UnreadableDocument(
                     \str_replace($document, $source, $error->getMessage()),
                     0,
                     $error,
@@ -227,11 +233,11 @@ final class Runner
         $path = \realpath($this->site . '/' . $source);
 
         if ($path === false || $site === false) {
-            throw new \RuntimeException(\sprintf('There is no document at "%s".', $source));
+            throw new UnreadableDocument(\sprintf('There is no document at "%s".', $source));
         }
 
         if (! \str_starts_with($path, $site . \DIRECTORY_SEPARATOR)) {
-            throw new \RuntimeException(\sprintf('The document "%s" is not inside the site.', $source));
+            throw new UnreadableDocument(\sprintf('The document "%s" is not inside the site.', $source));
         }
 
         return $path;
@@ -308,7 +314,6 @@ final class Runner
     private function read(
         string $language,
         string $role,
-        string $url,
         string $name,
         string $cache,
         array $read,
@@ -316,7 +321,7 @@ final class Runner
         return new Example(
             $language,
             $role,
-            (string) \file_get_contents($cache . '/example.md'),
+            (string) \file_get_contents($cache . self::MARKDOWN),
             $name,
             $read['document'] ?? null,
             $read['pdf'] ?? null,
@@ -340,7 +345,7 @@ final class Runner
         array $contents = [],
     ): void {
         \file_put_contents(
-            $cache . '/manifest.json',
+            $cache . self::MANIFEST,
             (string) \json_encode(
                 [
                     'input' => $input,

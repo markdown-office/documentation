@@ -89,6 +89,26 @@ function find(string $directory): array
 {
     $found = [];
 
+    foreach (markdownFiles($directory) as $path) {
+        foreach (blocks((string) \file_get_contents($path)) as $block) {
+            $pending = pendingFrom($path, $directory, $block);
+
+            if ($pending !== null) {
+                $found[] = $pending;
+            }
+        }
+    }
+
+    return $found;
+}
+
+/**
+ * The Markdown files under a directory.
+ *
+ * @return list<string>
+ */
+function markdownFiles(string $directory): array
+{
     $files = \iterator_to_array(
         new \RecursiveIteratorIterator(
             new \RecursiveDirectoryIterator($directory, \FilesystemIterator::SKIP_DOTS),
@@ -97,93 +117,116 @@ function find(string $directory): array
         false,
     );
 
+    $paths = [];
+
     foreach ($files as $file) {
         $path = $file->getPathname();
 
-        if (! $file->isFile() || ! \str_ends_with($path, '.md')) {
-            continue;
-        }
-
-        $markdown = (string) \file_get_contents($path);
-
-        // Paired tags rather than a fence on its own: the fence has to stay a fence so the
-        // Markdown parser still reads it as one, and a page that shows its own examples needs a
-        // way to say "this one is code and that one is a document".
-        \preg_match_all(
-            '/\{%\s*example\b([^%]*)%\}(.*?)\{%\s*endexample\s*%\}/s',
-            $markdown,
-            $matches,
-            \PREG_SET_ORDER,
-        );
-
-        foreach ($matches as $match) {
-            $body = $match[2];
-
-            // A fence of three or more backticks, tagged with the direction it runs in —
-            // `md word`, `md presentation` or `word md` — closed by a run of the same length.
-            // The same length is what lets an example that itself contains a fenced block be
-            // written with four backticks.
-            //
-            // A quoted title may follow the direction on the fence line. It is the same title the
-            // paired tag can carry, and a page that writes the title once in the fence and once
-            // in the tag is a page with two places to keep them in step.
-            \preg_match(
-                '/^(`{3,})(md|word|presentation)[ \t]+(md|word|presentation)[ \t]*(?:"([^"]*)")?[ \t]*\n([\s\S]*?)^\1[ \t]*$/m',
-                $body,
-                $fence,
-            );
-
-            if ($fence === []) {
-                \fwrite(\STDERR, \sprintf(
-                    "  %s: an {%% example %%} block has no `md word`, `md presentation` or `word md` fence.\n",
-                    $file,
-                ));
-                continue;
-            }
-
-            $direction = $fence[2] . '-' . $fence[3];
-
-            if (! isset(Runner::DIRECTIONS[$direction])) {
-                \fwrite(\STDERR, \sprintf(
-                    "  %s: an {%% example %%} block runs in the direction \"%s\", which the site does not build.\n",
-                    $file,
-                    $direction,
-                ));
-                continue;
-            }
-
-            // What goes to the library is the body of the fence, without its backticks: the
-            // Markdown for a direction that builds a document, the path of the document for one
-            // that reads it.
-            //
-            // The trim is load-bearing for the document as well as for the key: a deck's
-            // frontmatter is matched at the first byte of the file, so an example whose source
-            // began with a blank line would put `theme:` on slide 2 and be refused for naming a
-            // deck directive there.
-            $source = \trim($fence[5]);
-
-            // The tag wins over the fence, because the tag is the one an author edits when they
-            // are looking at the `{% example %}` and not at the fence inside it.
-            $title = \trim(\trim($match[1]), '"');
-            $title = $title === '' ? \trim($fence[4] ?? '', '"') : $title;
-            $title = $title !== '' ? $title : Runner::DIRECTIONS[$direction] . ' example';
-
-            // The key is hashed from the *whole* trimmed block, fences included, because that is
-            // what the Eleventy shortcode has to hand: it is given the text between the paired
-            // tags and cannot tell a body from the fence around it without re-parsing it.
-            $block = \trim($fence[0]);
-
-            $found[] = new Pending(
-                \str_replace($directory . '/', '', $path),
-                \substr(\hash('sha256', $block), 0, 16),
-                $direction,
-                $title,
-                $source,
-            );
+        if ($file->isFile() && \str_ends_with($path, '.md')) {
+            $paths[] = $path;
         }
     }
 
+    return $paths;
+}
+
+/**
+ * The `{% example %}` … `{% endexample %}` pairs in a page.
+ *
+ * Paired tags rather than a fence on its own: the fence has to stay a fence so the Markdown
+ * parser still reads it as one, and a page that shows its own examples needs a way to say
+ * "this one is code and that one is a document".
+ *
+ * @return list<array{tag: string, body: string}>
+ */
+function blocks(string $markdown): array
+{
+    \preg_match_all(
+        '/\{%\s*example\b([^%]*)%\}(.*?)\{%\s*endexample\s*%\}/s',
+        $markdown,
+        $matches,
+        \PREG_SET_ORDER,
+    );
+
+    $found = [];
+
+    foreach ($matches as $match) {
+        $found[] = ['tag' => $match[1], 'body' => $match[2]];
+    }
+
     return $found;
+}
+
+/**
+ * The example a block holds, or null when the block holds none.
+ *
+ * @param array{tag: string, body: string} $block
+ */
+function pendingFrom(string $file, string $directory, array $block): ?Pending
+{
+    // A fence of three or more backticks, tagged with the direction it runs in —
+    // `md word`, `md presentation` or `word md` — closed by a run of the same length.
+    // The same length is what lets an example that itself contains a fenced block be
+    // written with four backticks.
+    //
+    // A quoted title may follow the direction on the fence line. It is the same title the
+    // paired tag can carry, and a page that writes the title once in the fence and once
+    // in the tag is a page with two places to keep them in step.
+    \preg_match(
+        '/^(`{3,})(md|word|presentation)[ \t]+(md|word|presentation)[ \t]*(?:"([^"]*)")?[ \t]*\n([\s\S]*?)^\1[ \t]*$/m',
+        $block['body'],
+        $fence,
+    );
+
+    if ($fence === []) {
+        \fwrite(\STDERR, \sprintf(
+            "  %s: an {%% example %%} block has no `md word`, `md presentation` or `word md` fence.\n",
+            $file,
+        ));
+
+        return null;
+    }
+
+    $direction = $fence[2] . '-' . $fence[3];
+
+    if (! isset(Runner::DIRECTIONS[$direction])) {
+        \fwrite(\STDERR, \sprintf(
+            "  %s: an {%% example %%} block runs in the direction \"%s\", which the site does not build.\n",
+            $file,
+            $direction,
+        ));
+
+        return null;
+    }
+
+    // What goes to the library is the body of the fence, without its backticks: the
+    // Markdown for a direction that builds a document, the path of the document for one
+    // that reads it.
+    //
+    // The trim is load-bearing for the document as well as for the key: a deck's
+    // frontmatter is matched at the first byte of the file, so an example whose source
+    // began with a blank line would put `theme:` on slide 2 and be refused for naming a
+    // deck directive there.
+    $source = \trim($fence[5]);
+
+    // The tag wins over the fence, because the tag is the one an author edits when they
+    // are looking at the `{% example %}` and not at the fence inside it.
+    $title = \trim(\trim($block['tag']), '"');
+    $title = $title === '' ? \trim($fence[4] ?? '', '"') : $title;
+    $title = $title !== '' ? $title : Runner::DIRECTIONS[$direction] . ' example';
+
+    // The key is hashed from the *whole* trimmed block, fences included, because that is
+    // what the Eleventy shortcode has to hand: it is given the text between the paired
+    // tags and cannot tell a body from the fence around it without re-parsing it.
+    $whole = \trim($fence[0]);
+
+    return new Pending(
+        \str_replace($directory . '/', '', $file),
+        \substr(\hash('sha256', $whole), 0, 16),
+        $direction,
+        $title,
+        $source,
+    );
 }
 
 /**
